@@ -39,7 +39,7 @@ function parseCSV(filePath) {
 
 // Bone card map: { "1-A": { skull: 2, torso: 1, leg: 0, tail: 0 }, ... }
 const boneCardMap = {};
-const boneCardRows = parseCSV(path.join(__dirname, 'resources', 'treasure_bone_cards.csv'));
+const boneCardRows = parseCSV(path.join(__dirname, 'data', 'treasure_bone_cards.csv'));
 boneCardRows.forEach(row => {
     boneCardMap[row['card name']] = {
         skull: parseInt(row['skull bone']) || 0,
@@ -51,7 +51,7 @@ boneCardRows.forEach(row => {
 
 // Sack rewards map: { "1": { "A. Torso-Focused Sack": { skull:3, torso:7, leg:4, tail:1 }, ... }, "2": { ... } }
 const sackRewardsMap = {};
-const sackRows = parseCSV(path.join(__dirname, 'resources', 'excavator_rewards.csv'));
+const sackRows = parseCSV(path.join(__dirname, 'data', 'excavator_rewards.csv'));
 sackRows.forEach(row => {
     const round = row['round'];
     if (!sackRewardsMap[round]) sackRewardsMap[round] = {};
