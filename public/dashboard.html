@@ -156,6 +156,9 @@
 
         socket.on('hints:data', (hints) => {
             window.classHints = hints;
+            if (window.gameState) {
+                window.onStateUpdate(window.gameState);
+            }
         });
 
         socket.on('connect', () => {
@@ -209,12 +212,18 @@
                     return a.card_id.localeCompare(b.card_id);
                 });
                 sortedCards.forEach(c => {
-                    if (classGroups[c.owner_class_id]) classGroups[c.owner_class_id].push(c);
+                    if (c.round == state.current_round) {
+                        if (classGroups[c.owner_class_id]) classGroups[c.owner_class_id].push(c);
+                    }
                     
                     if(c.status === 'RELEASED' && c.owner_class_id == myClassId && c.type === 'HINT') {
                         const hintText = (window.classHints && window.classHints[c.card_id])
                             ? window.classHints[c.card_id] : `Unknown Hint: ${c.card_id}`;
-                        hintsHtml += `<div style="margin-bottom: 10px;">??${hintText}</div>`;
+                        const formattedHint = hintText.replace(/\b(skull|torso|leg|tail)\b/gi, match => {
+                            const word = match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
+                            return `<strong style="color:#ffd700">${word}</strong>`;
+                        });
+                        hintsHtml += `<div style="margin-bottom: 10px; display:flex; align-items:flex-start;"><span style="color:var(--primary-color); margin-right:8px; font-weight:bold;">•</span><div>${formattedHint}</div></div>`;
                     }
                 });
 
@@ -321,7 +330,7 @@
         window.onPhaseSync = onPhaseSync;
 
         function spawnParticles() {
-            const shapes = ['■','◆','▲','●'];
+            const shapes = ['✨', '⭐', '🌟', '✦'];
             const container = document.querySelector('.overlay');
             for (let i = 0; i < 40; i++) {
                 setTimeout(() => {

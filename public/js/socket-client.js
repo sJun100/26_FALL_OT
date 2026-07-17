@@ -5,6 +5,7 @@ let gameState = {};
 // When server sends state update
 socket.on('state:update', (state) => {
     gameState = state;
+    window.gameState = state;
     if (typeof window.onStateUpdate === 'function') {
         window.onStateUpdate(state);
     }

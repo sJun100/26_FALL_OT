@@ -192,7 +192,7 @@ th {
 /* Animations */
 .particle {
     position: absolute;
-    color: var(--text-main);
+    color: #ffd700;
     font-size: 24px;
     pointer-events: none;
     animation: flyIn 1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;

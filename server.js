@@ -262,6 +262,7 @@ io.on('connection', (socket) => {
 
     socket.on('admin:setRound', (round) => {
         logEvent('Admin', `Changed Round to ${round}`);
+        excavatorDistribution = {}; // Reset distributions on new round
         db.run(`UPDATE game_state SET value = ? WHERE key = 'current_round'`, [round.toString()], () => {
             // Also reset phase to 1 when changing round
             db.run(`UPDATE game_state SET value = '1' WHERE key = 'current_phase'`, () => {
