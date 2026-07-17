@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Console - Client X</title>
+    <link rel="stylesheet" href="css/theme.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        .submission-row { padding: 8px; border-bottom: 1px solid rgba(212,175,55,0.3); }
+        .submission-row.approved { opacity: 0.5; }
+        .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.8em; }
+        .status-badge.waiting { background: #333333; color: var(--text-main); border: 1px solid #555; }
+        .status-badge.done { background: #440000; color: #ffffff; border: 1px solid #ff4444; }
+        .status-badge.missing { background: #111111; color: var(--text-muted); border: 1px solid #333; }
+    </style>
+</head>
+<body>
+    <div class="overlay">
+        <div class="panel" style="display:flex; justify-content:space-between; align-items:center; padding: 10px 20px;">
+            <div style="flex: 1; text-align: left;"><h1 style="margin-bottom:0;">Admin Console</h1></div>
+            <div style="flex: 1; text-align: center;"><div class="timer" id="timerDisplay" style="font-size:2.5em; display:inline-block;">00:00</div></div>
+            <div style="flex: 1; font-size: 1.5em; text-align: right;">
+                <div>Round: <span id="lblRound" style="color:var(--primary-color);">?</span></div>
+                <div>Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 flex-1 h-full" style="min-height:0;">
+            <!-- Column 1: Controls & Utilities -->
+            <div class="flex-col" style="gap: 10px;">
+                <div class="panel">
+                    <h2>Round & Phase Control</h2>
+                    <div style="margin-bottom:15px; display:flex; gap:10px;">
+                        <select id="selRound" style="flex:1; font-size:1.1em; padding:5px;">
+                            <option value="1">Round 1</option><option value="2">Round 2</option>
+                            <option value="3">Round 3</option><option value="4">Round 4</option>
+                            <option value="5">Round 5</option><option value="6">Round 6</option>
+                        </select>
+                        <button onclick="setRound()">Set</button>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <select id="selPhase" style="flex:1; font-size:1.1em; padding:5px;">
+                            <option value="1">P1: Plan</option>
+                            <option value="2">P2: Mission</option>
+                            <option value="3">P3: Return</option>
+                            <option value="4">P4: Restoration</option>
+                            <option value="5">P5: Submission</option>
+                        </select>
+                        <button onclick="setPhase()">Force</button>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h2>Timer</h2>
+                    <div style="margin-top:10px; text-align:center;">
+                        <input type="number" id="timerMinutes" value="3" min="1" max="30" style="width:60px; padding:5px; font-size:1em;">
+                        <span style="color:var(--text-muted);">m</span>
+                        <button onclick="startTimer()" style="margin-left:5px; padding: 5px 10px;">Start</button>
+                        <button onclick="stopTimer()" style="margin-left:5px; padding: 5px 10px; background:#440000;">Stop</button>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h2>Manual Bone Edit</h2>
+                    <div style="display:flex; gap:5px; margin-bottom:5px;">
+                        <select id="edtClass" style="font-size:1em; padding:5px;"><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option></select>
+                        <select id="edtBone" style="font-size:1em; padding:5px;"><option value="H">Skull</option><option value="B">Torso</option><option value="L">Leg</option><option value="T">Tail</option></select>
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                        <input type="number" id="edtAmount" style="width:100px; padding:5px; font-size:1em;" value="0">
+                        <button onclick="updateBones()" style="flex:1; padding: 5px 10px;">Apply</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2">
+                    <div class="panel" style="text-align:center;">
+                        <button onclick="window.open('/api/export','_blank')" style="font-size: 0.9em;">Export Log</button>
+                    </div>
+                    <div class="panel" style="text-align:center;">
+                        <button onclick="resetDB()" style="background:#440000; font-size: 0.9em;">Full Reset</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 2: Classes State -->
+            <div class="panel flex-col flex-1">
+                <h2>All Classes Inventory</h2>
+                <div class="scrollable-panel flex-1">
+                    <table id="tblClasses">
+                        <tr><th>Class</th><th><img src="resources/skull.png" style="height:1.2em; vertical-align:middle;"> Skull</th><th><img src="resources/torso.png" style="height:1.2em; vertical-align:middle;"> Torso</th><th><img src="resources/leg.png" style="height:1.2em; vertical-align:middle;"> Leg</th><th><img src="resources/tail.png" style="height:1.2em; vertical-align:middle;"> Tail</th><th>Total</th></tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Column 3: Approvals & Alerts -->
+            <div class="flex-col" style="gap: 10px;">
+                <div class="panel flex-1 flex-col">
+                    <h2>Fossil Restoration Lock System</h2>
+                    <div id="submissionStatus" style="font-size:1.1em; margin-bottom:10px; font-weight:bold;"></div>
+                    <div id="submissionList" class="scrollable-panel flex-1"></div>
+                    <div style="margin-top:10px; display:flex; gap:10px;">
+                        <button id="btnReveal" onclick="revealResults()" style="flex:1; padding:8px;" disabled>Reveal Ranks</button>
+                        <button onclick="hideResults()" style="flex:1; padding:8px; background:#440000;">Hide Ranks</button>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h2>Emergency Alert</h2>
+                    <div style="display:flex; gap:5px;">
+                        <input type="text" id="txtAlert" placeholder="Type alert..." style="flex:1; font-size:1em; padding:5px;">
+                        <button onclick="sendAlert()" style="padding: 5px 10px;">Send</button>
+                        <button onclick="closeAlert()" style="padding: 5px 10px; background:#440000;">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="connectionDot" class="connection-indicator"></div>
+
+    <script src="js/socket-client.js"></script>
+    <script>
+        let currentRound = '1';
+        const phaseNames = {1:'Plan', 2:'Mission', 3:'Return', 4:'Restoration', 5:'Submission'};
+
+        function onStateUpdate(state) {
+            currentRound = state.current_round || '1';
+            document.getElementById('lblRound').innerText = state.current_round;
+            document.getElementById('lblPhase').innerText = `${state.current_phase} (${phaseNames[state.current_phase] || ''})`;
+
+            // Classes table
+            if (state.classes) {
+                let html = '<tr><th>Class</th><th><img src="resources/skull.png" style="height:1.2em; vertical-align:middle;"> Skull</th><th><img src="resources/torso.png" style="height:1.2em; vertical-align:middle;"> Torso</th><th><img src="resources/leg.png" style="height:1.2em; vertical-align:middle;"> Leg</th><th><img src="resources/tail.png" style="height:1.2em; vertical-align:middle;"> Tail</th><th>Total</th></tr>';
+                state.classes.forEach(c => {
+                    const total = c.skull_count + c.torso_count + c.leg_count + c.tail_count;
+                    html += `<tr><td>${c.class_id}</td><td>${c.skull_count}</td><td>${c.torso_count}</td><td>${c.leg_count}</td><td>${c.tail_count}</td><td>${total}</td></tr>`;
+                });
+                document.getElementById('tblClasses').innerHTML = html;
+            }
+
+            // Restoration submissions for current round
+            if (state.restorations) {
+                const roundSubs = state.restorations.filter(r => r.round == currentRound);
+                const classIds = [27, 28, 29, 30, 31];
+                const submitted = roundSubs.map(r => r.class_id);
+                const approvedCount = roundSubs.filter(r => r.is_locked).length;
+
+                document.getElementById('submissionStatus').innerHTML =
+                    `Round ${currentRound}: Submitted ${submitted.length}/5 | Locked ${approvedCount}/5`;
+                
+                const btnReveal = document.getElementById('btnReveal');
+                if (btnReveal) {
+                    btnReveal.disabled = (approvedCount < 5);
+                }
+
+                let html = '';
+                classIds.forEach(cid => {
+                    const sub = roundSubs.find(r => r.class_id === cid);
+                    if (sub) {
+                        const statusClass = sub.is_locked ? 'done' : 'waiting';
+                        const statusText = sub.is_locked ? 'Locked' : 'Waiting';
+                        html += `<div class="submission-row ${sub.is_locked ? 'approved' : ''}">
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:5px;">
+                                <div>
+                                    <strong>Class ${cid}</strong> 
+                                    <span class="status-badge ${statusClass}">${statusText}</span><br>
+                                    <span style="font-size:0.9em; color:#ccc;">H:${sub.skull_sub} B:${sub.torso_sub} L:${sub.leg_sub} T:${sub.tail_sub} | Error: ${sub.error_rate}%</span>
+                                </div>
+                                <div style="flex-shrink: 0;">
+                                    ${!sub.is_locked ? `<button onclick="lockSubmission(${cid})" style="padding: 4px 12px; font-size: 0.9em; background:var(--primary-color); color:#000; min-width: 75px; white-space: nowrap;">Lock</button>` : `<button onclick="unlockSubmission(${cid})" style="padding: 4px 12px; font-size: 0.9em; background:#666; color:#fff; min-width: 75px; white-space: nowrap;">Unlock</button>`}
+                                </div>
+                            </div>
+                        </div>`;
+                    } else {
+                        html += `<div class="submission-row">
+                            <strong>Class ${cid}</strong>
+                            <span class="status-badge missing">Not Submitted</span>
+                        </div>`;
+                    }
+                });
+                document.getElementById('submissionList').innerHTML = html;
+            }
+        }
+
+        function setRound() {
+            const r = document.getElementById('selRound').value;
+            if (confirm(`Set game to Round ${r}?`)) socket.emit('admin:setRound', r);
+        }
+
+        function setPhase() {
+            const p = document.getElementById('selPhase').value;
+            if (confirm(`Force transition to Phase ${p}?`)) {
+                socket.emit('admin:setPhase', p);
+                
+                // Auto-set timer defaults based on phase (user request)
+                const defaults = { 1: 3, 2: 9, 3: 1, 4: 4, 5: 1 };
+                if (defaults[p]) {
+                    document.getElementById('timerMinutes').value = defaults[p];
+                }
+            }
+        }
+
+        function updateBones() {
+            const cid = document.getElementById('edtClass').value;
+            const b = document.getElementById('edtBone').value;
+            const amt = parseInt(document.getElementById('edtAmount').value);
+            if (isNaN(amt)) { alert('Enter a valid number.'); return; }
+            if (confirm(`Apply ${amt} to ${b} for Class ${cid}?`))
+                socket.emit('admin:updateBones', { class_id: cid, boneType: b, amount: amt });
+        }
+
+        function lockSubmission(classId) {
+            if (confirm(`Lock Class ${classId}'s submission for Round ${currentRound}?`))
+                socket.emit('admin:lockRestoration', { class_id: classId, round: parseInt(currentRound) });
+        }
+        function unlockSubmission(classId) {
+            if (confirm(`Unlock Class ${classId}'s submission?`))
+                socket.emit('admin:unlockRestoration', { class_id: classId, round: parseInt(currentRound) });
+        }
+
+        function sendAlert() {
+            const msg = document.getElementById('txtAlert').value.trim();
+            if (msg) {
+                socket.emit('admin:sendAlert', msg);
+                document.getElementById('txtAlert').value = '';
+            }
+        }
+
+        function closeAlert() { socket.emit('admin:closeAlert'); }
+
+        function resetDB() {
+            if (confirm('WARNING: This will erase ALL game data. Are you sure?')) {
+                if (confirm('FINAL CONFIRMATION: Reset everything to zero?')) {
+                    fetch('/api/reset', { method: 'POST' })
+                        .then(r => r.json())
+                        .then(() => alert('Database reset complete.'))
+                        .catch(err => alert('Failed to reset database. Server may be disconnected.'));
+                }
+            }
+        }
+
+        // Timer functions
+        socket.on('timer:tick', (data) => {
+            const min = Math.floor(data.remaining / 60);
+            const sec = data.remaining % 60;
+            const display = document.getElementById('timerDisplay');
+            display.innerText = `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+            if (data.remaining === 0 && !data.running) {
+                display.classList.add('blinking');
+            } else {
+                display.classList.remove('blinking');
+            }
+        });
+
+        function startTimer() { socket.emit('admin:startTimer', document.getElementById('timerMinutes').value); }
+        function stopTimer() { socket.emit('admin:stopTimer'); }
+
+        socket.on('connect', () => {
+            socket.emit('getTimer');
+        });
+
+        // Reveal functions
+        function revealResults() {
+            const isFinal = parseInt(currentRound) === 6;
+            socket.emit('admin:revealResults', { round: parseInt(currentRound), isFinal: isFinal });
+        }
+
+        function hideResults() { socket.emit('admin:hideResults'); }
+    </script>
+</body>
+</html>

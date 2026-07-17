@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Class Dashboard - Client A</title>
+    <link rel="stylesheet" href="css/theme.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        .hidden { display: none; }
+        /* ?國盒 ?�� ?𨰰� ??*/
+        .connection-indicator {
+            position: fixed;
+            bottom: 12px;
+            right: 12px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #555;
+            border: 2px solid rgba(212, 175, 55, 0.4);
+            z-index: 9999;
+            transition: background 0.3s;
+        }
+        .connection-indicator.connected { background: #22c55e; }
+        .connection-indicator.disconnected { background: #8b0000; }
+        /* 공지사항 긴급 알림 */
+        .alert-banner {
+            background: rgba(139, 0, 0, 0.9);
+            border: 1px solid #8b0000;
+            color: #f0e6d2;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.7em; /* Relative to the header's 1.5em */
+            text-align: center;
+            width: fit-content;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            margin: 0;
+            animation: pulse 2s infinite;
+        }
+        /* Result Reveal Cards */
+        .result-card {
+            background: var(--panel-bg);
+            border: 2px solid var(--primary-color);
+            border-radius: 12px;
+            padding: 20px 30px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.5em;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .result-card.visible { opacity: 1; transform: translateY(0); }
+        .result-card.winner {
+            border-color: #ffd700;
+            box-shadow: 0 0 30px rgba(255,215,0,0.5);
+            font-size: 1.8em;
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay">
+        <div class="panel" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
+            <div style="flex: 1; text-align: left;"><h1 id="classTitle" style="margin-bottom:0;">Class Dashboard</h1></div>
+            <div style="flex: 1; text-align: center;"><div class="timer" id="timerDisplay" style="font-size:2.5em; display:inline-block;">00:00</div></div>
+            <div style="flex: 1; font-size: 1.5em; text-align: right; position: relative;">
+                <div id="alertBanner" class="alert-banner" style="display:none; position: absolute; left: 0; top: 50%; transform: translateY(-50%); z-index: 100;"></div>
+                <div>Round: <span id="lblRound" style="color:var(--primary-color);">?</span></div>
+                <div>Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2" style="gap: 10px;">
+            <div class="panel flex-col" style="padding: 10px; justify-content: space-evenly;">
+                <h2 style="font-size: 1.2em; margin-bottom: 10px;">Fossil Inventory</h2>
+                <div class="grid grid-cols-4 flex-1" id="inventory" style="text-align:center; align-items:center;">
+                    <div style="padding: 10px;"><span style="font-size: 2.5em; display:block; margin-bottom:10px;"><img src="resources/skull.png" style="height:1em; vertical-align:middle;"></span><span style="font-size:1.2em; color:var(--text-muted);">Skull</span><br><strong id="invH" style="font-size: 2em; color:var(--primary-color);">0</strong></div>
+                    <div style="padding: 10px;"><span style="font-size: 2.5em; display:block; margin-bottom:10px;"><img src="resources/torso.png" style="height:1em; vertical-align:middle;"></span><span style="font-size:1.2em; color:var(--text-muted);">Torso</span><br><strong id="invB" style="font-size: 2em; color:var(--primary-color);">0</strong></div>
+                    <div style="padding: 10px;"><span style="font-size: 2.5em; display:block; margin-bottom:10px;"><img src="resources/leg.png" style="height:1em; vertical-align:middle;"></span><span style="font-size:1.2em; color:var(--text-muted);">Leg</span><br><strong id="invL" style="font-size: 2em; color:var(--primary-color);">0</strong></div>
+                    <div style="padding: 10px;"><span style="font-size: 2.5em; display:block; margin-bottom:10px;"><img src="resources/tail.png" style="height:1em; vertical-align:middle;"></span><span style="font-size:1.2em; color:var(--text-muted);">Tail</span><br><strong id="invT" style="font-size: 2em; color:var(--primary-color);">0</strong></div>
+                </div>
+            </div>
+            <div class="flex-col" style="gap:10px;">
+                <div class="panel flex-1 flex-col" style="padding: 10px; justify-content: center;">
+                    <h2 style="font-size: 1.1em; margin-bottom: 5px;">Group Roles (Round <span id="lblRoleRound">1</span>)</h2>
+                    <div id="roleTable" class="grid grid-cols-4" style="text-align:center; font-size:1em; font-weight:bold; color:var(--text-main); margin-top:5px;"></div>
+                </div>
+                <div class="panel flex-1 flex-col" style="padding: 10px; justify-content: center;">
+                    <h2 style="font-size: 1.1em; margin-bottom: 5px;">Excavator Distributions</h2>
+                    <div id="excavatorSacks" class="scrollable-panel" style="font-size: 1em; text-align:center; padding: 5px;">Waiting...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 flex-1" style="gap: 10px;">
+            <div class="panel flex-1 flex-col" style="padding: 10px;">
+                <h2 style="font-size: 1.1em;">Unlocked Hints</h2>
+                <div id="hintsList" class="scrollable-panel flex-1" style="font-size: 1em;"></div>
+                <div id="pnlSubmitFossil" class="hidden" style="margin-top:10px; border-top:1px solid #444; padding-top:10px;">
+                    <h2 style="font-size: 1.1em; color:#ffd700; margin-bottom:10px;">Submit Fossil Restoration</h2>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px; gap:10px;">
+                        <div style="flex:1; text-align:center;">
+                            <img src="resources/skull.png" style="height:1.2em; vertical-align:middle; margin-right:5px;"> Skull<br>
+                            <input type="number" id="subH" value="0" min="0" style="width:100%; text-align:center; margin-top:5px;">
+                        </div>
+                        <div style="flex:1; text-align:center;">
+                            <img src="resources/torso.png" style="height:1.2em; vertical-align:middle; margin-right:5px;"> Torso<br>
+                            <input type="number" id="subB" value="0" min="0" style="width:100%; text-align:center; margin-top:5px;">
+                        </div>
+                        <div style="flex:1; text-align:center;">
+                            <img src="resources/leg.png" style="height:1.2em; vertical-align:middle; margin-right:5px;"> Leg<br>
+                            <input type="number" id="subL" value="0" min="0" style="width:100%; text-align:center; margin-top:5px;">
+                        </div>
+                        <div style="flex:1; text-align:center;">
+                            <img src="resources/tail.png" style="height:1.2em; vertical-align:middle; margin-right:5px;"> Tail<br>
+                            <input type="number" id="subT" value="0" min="0" style="width:100%; text-align:center; margin-top:5px;">
+                        </div>
+                    </div>
+                    <button id="btnSubmitFossil" onclick="submitFossil()" style="width:100%;">Submit Fossil Restoration</button>
+                    <div id="lblLockStatus" style="color: #ffaa00; text-align: center; margin-top: 10px; display: none; font-weight: bold;"></div>
+                </div>
+            </div>
+            
+            <div class="panel flex-1 flex-col" style="padding: 10px;">
+                <h2 style="font-size: 1.1em;">Global Treasure Hunt Board</h2>
+                <div class="scrollable-panel flex-1">
+                    <table id="globalBoard" style="font-size:1em;">
+                        <tr><th>Class</th><th>Card ID</th><th>Type</th><th>Status</th></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Reveal Overlay -->
+        <div id="resultOverlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(10,8,5,0.95); z-index:9000; flex-direction:column; justify-content:center; align-items:center;">
+            <h1 style="font-size:2.5em; margin-bottom:30px;">Round Results</h1>
+            <div id="resultCards" style="width:80%; max-width:800px;"></div>
+        </div>
+    </div>
+
+    <div id="connectionDot" class="connection-indicator"></div>
+
+    <script src="js/socket-client.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let myClassId = urlParams.get('class_id');
+        let currentRound = 1;
+        if(!myClassId) {
+            myClassId = prompt("Enter Class ID (27, 28, 29, 30, 31):", "27");
+            window.location.search = `?class_id=${myClassId}`;
+        }
+        document.getElementById('classTitle').innerText = `Class ${myClassId} Dashboard`;
+
+        window.classHints = {};
+
+        socket.on('hints:data', (hints) => {
+            window.classHints = hints;
+        });
+
+        socket.on('connect', () => {
+            socket.emit('getHints', myClassId);
+            document.getElementById('connectionDot').classList.add('connected');
+            document.getElementById('connectionDot').classList.remove('disconnected');
+        });
+
+        socket.on('disconnect', () => {
+            document.getElementById('connectionDot').classList.remove('connected');
+            document.getElementById('connectionDot').classList.add('disconnected');
+        });
+
+        socket.on('admin:alertMessage', (msg) => {
+            const banner = document.getElementById('alertBanner');
+            banner.textContent = msg;
+            banner.style.display = 'block';
+        });
+
+        socket.on('admin:closeAlert', () => {
+            const banner = document.getElementById('alertBanner');
+            banner.style.display = 'none';
+            banner.textContent = '';
+        });
+
+        const phaseNames = {1:'Plan', 2:'Mission', 3:'Return', 4:'Restoration', 5:'Submission'};
+
+        function onStateUpdate(state) {
+            currentRound = state.current_round;
+            document.getElementById('lblRound').innerText = state.current_round;
+            document.getElementById('lblRoleRound').innerText = state.current_round;
+            document.getElementById('lblPhase').innerText = `${state.current_phase} (${phaseNames[state.current_phase] || ''})`;
+
+            if(state.classes) {
+                const myClass = state.classes.find(c => c.class_id == myClassId);
+                if(myClass) {
+                    document.getElementById('invH').innerText = myClass.skull_count;
+                    document.getElementById('invB').innerText = myClass.torso_count;
+                    document.getElementById('invL').innerText = myClass.leg_count;
+                    document.getElementById('invT').innerText = myClass.tail_count;
+                }
+            }
+
+            if(state.cards) {
+                let html = '<tr><th>Class</th><th>Card ID</th><th>Type</th><th>Status</th></tr>';
+                let hintsHtml = '';
+                
+                const classGroups = { 27: [], 28: [], 29: [], 30: [], 31: [] };
+                let sortedCards = state.cards.sort((a,b) => {
+                    if(a.type !== b.type) return a.type.localeCompare(b.type);
+                    return a.card_id.localeCompare(b.card_id);
+                });
+                sortedCards.forEach(c => {
+                    if (classGroups[c.owner_class_id]) classGroups[c.owner_class_id].push(c);
+                    
+                    if(c.status === 'RELEASED' && c.owner_class_id == myClassId && c.type === 'HINT') {
+                        const hintText = (window.classHints && window.classHints[c.card_id])
+                            ? window.classHints[c.card_id] : `Unknown Hint: ${c.card_id}`;
+                        hintsHtml += `<div style="margin-bottom: 10px;">??${hintText}</div>`;
+                    }
+                });
+
+                Object.keys(classGroups).sort((a,b) => parseInt(a) - parseInt(b)).forEach(clsId => {
+                    const cards = classGroups[clsId];
+                    if (cards.length === 0) {
+                        html += `<tr><td style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td></tr>`;
+                    } else {
+                        cards.forEach((card, idx) => {
+                            html += `<tr>
+                                ${idx === 0 ? `<td rowspan="${cards.length}" style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td>` : ''}
+                                <td style="font-weight:bold;">${card.card_id}</td>
+                                <td>${card.type}</td>
+                                <td>${card.status}</td>
+                            </tr>`;
+                        });
+                    }
+                });
+                
+                document.getElementById('globalBoard').innerHTML = html;
+                document.getElementById('hintsList').innerHTML = hintsHtml;
+            }
+
+            if(state.excavatorDistribution && Object.keys(state.excavatorDistribution).length > 0) {
+                let sackHtml = [];
+                for(const [classId, sackName] of Object.entries(state.excavatorDistribution)) {
+                    sackHtml.push(`Class ${classId}: <span style="color:var(--primary-color)">${sackName}</span>`);
+                }
+                document.getElementById('excavatorSacks').innerHTML = sackHtml.join(' | ');
+            } else {
+                document.getElementById('excavatorSacks').innerHTML = 'Awaiting Excavator Distribution...';
+            }
+
+            if(state.current_phase == 5) {
+                document.getElementById('pnlSubmitFossil').classList.remove('hidden');
+            } else {
+                document.getElementById('pnlSubmitFossil').classList.add('hidden');
+            }
+            
+            const roundRoles = {
+                1: ['A: Archaeologist', 'B: Excavator', 'C: Researcher', 'D: Smuggler'],
+                2: ['A: Archaeologist', 'B: Excavator', 'C: Researcher', 'D: Smuggler'],
+                3: ['A: Excavator', 'B: Researcher', 'C: Smuggler', 'D: Archaeologist'],
+                4: ['A: Researcher', 'B: Smuggler', 'C: Archaeologist', 'D: Excavator'],
+                5: ['A: Smuggler', 'B: Archaeologist', 'C: Excavator', 'D: Researcher'],
+                6: ['A: Archaeologist', 'B: Excavator', 'C: Researcher', 'D: Smuggler']
+            };
+            const rolesForRound = roundRoles[state.current_round] || roundRoles[1];
+            document.getElementById('roleTable').innerHTML = rolesForRound.map(r => `<div>${r}</div>`).join('');
+
+            const btnSubmit = document.getElementById('btnSubmitFossil');
+            if (state.restorations && btnSubmit) {
+                const myRest = state.restorations.find(r => r.class_id == myClassId && r.round == state.current_round);
+                if (myRest && myRest.is_locked === 1) {
+                    btnSubmit.disabled = true;
+                    btnSubmit.innerText = 'Locked by Admin';
+                } else {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerText = 'Submit Fossil Restoration';
+                }
+            }
+        }
+
+        socket.on('timer:tick', (data) => {
+            const min = Math.floor(data.remaining / 60);
+            const sec = data.remaining % 60;
+            const display = document.getElementById('timerDisplay');
+            display.innerText = `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+            if (data.remaining === 0 && !data.running) {
+                display.classList.add('blinking');
+            } else {
+                display.classList.remove('blinking');
+            }
+        });
+
+        socket.on('reveal:show', (data) => {
+            const overlay = document.getElementById('resultOverlay');
+            const container = document.getElementById('resultCards');
+            overlay.style.display = 'flex';
+            container.innerHTML = '';
+            
+            const sorted = data.results.sort((a,b) => a.error_rate - b.error_rate);
+            const delay = data.isFinal ? 3000 : 1000;
+            
+            sorted.forEach((r, i) => {
+                const isWinner = i === 0;
+                const rank = i + 1;
+                const card = document.createElement('div');
+                card.className = 'result-card' + (isWinner && data.isFinal ? ' winner' : '');
+                card.innerHTML = `<span>#${rank} Class ${r.class_id}</span><span>Error: ${r.error_rate}%</span>`;
+                container.appendChild(card);
+                
+                setTimeout(() => card.classList.add('visible'), (i + 1) * delay);
+            });
+        });
+
+        socket.on('reveal:hide', () => {
+            document.getElementById('resultOverlay').style.display = 'none';
+        });
+
+        function onPhaseSync(phase) {
+            if (phase == 4) { spawnParticles(); }
+        }
+        window.onPhaseSync = onPhaseSync;
+
+        function spawnParticles() {
+            const shapes = ['■','◆','▲','●'];
+            const container = document.querySelector('.overlay');
+            for (let i = 0; i < 40; i++) {
+                setTimeout(() => {
+                    const p = document.createElement('div');
+                    p.className = 'particle';
+                    p.textContent = shapes[Math.floor(Math.random() * shapes.length)];
+                    p.style.left = Math.random() * 80 + 10 + '%';
+                    p.style.top = Math.random() * 40 + 20 + '%';
+                    p.style.setProperty('--tx', (Math.random() - 0.5) * 400 + 'px');
+                    p.style.setProperty('--ty', (Math.random() - 1.0) * 300 + 'px');
+                    p.style.fontSize = Math.random() * 25 + 20 + 'px';
+                    container.appendChild(p);
+                    setTimeout(() => p.remove(), 1200);
+                }, i * 50);
+            }
+        }
+
+
+        function submitFossil() {
+            const h = parseInt(document.getElementById('subH').value) || 0;
+            const b = parseInt(document.getElementById('subB').value) || 0;
+            const l = parseInt(document.getElementById('subL').value) || 0;
+            const t = parseInt(document.getElementById('subT').value) || 0;
+
+            const maxH = parseInt(document.getElementById('invH').innerText);
+            const maxB = parseInt(document.getElementById('invB').innerText);
+            const maxL = parseInt(document.getElementById('invL').innerText);
+            const maxT = parseInt(document.getElementById('invT').innerText);
+
+            if(h > maxH || b > maxB || l > maxL || t > maxT) {
+                alert("Error: Submitted bones cannot exceed your current inventory!");
+                return;
+            }
+
+            if(confirm("Are you sure you want to submit this combination?")) {
+                socket.emit('clientA:submitRestoration', {
+                    class_id: myClassId,
+                    round: currentRound,
+                    H: h, B: b, L: l, T: t
+                });
+                alert("Submitted successfully! Waiting for Admin approval.");
+            }
+        }
+    </script>
+</body>
+</html>

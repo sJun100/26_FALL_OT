@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Researcher Scanner - Client C</title>
+    <link rel="stylesheet" href="css/theme.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        .history-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--primary-color); }
+        .success-flash { animation: flashWhite 0.5s; }
+        @keyframes flashWhite {
+            0% { background-color: rgba(255, 255, 255, 0.3); }
+            100% { background-color: transparent; }
+        }
+
+        .connection-indicator {
+            position: fixed;
+            bottom: 12px;
+            right: 12px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #555;
+            border: 2px solid rgba(212, 175, 55, 0.4);
+            z-index: 9999;
+            transition: background 0.3s;
+        }
+        .connection-indicator.connected { background: #22c55e; }
+        .connection-indicator.disconnected { background: #8b0000; }
+    </style>
+</head>
+<body>
+    <div class="overlay" id="mainOverlay">
+        <div class="panel" style="display:flex; justify-content:space-between; align-items:center; padding: 10px 20px;">
+            <div style="flex: 1; text-align: left;"><h1 style="margin-bottom:0;">Researcher Scanner</h1></div>
+            <div style="flex: 1; text-align: center;"><div class="timer" id="timerDisplay" style="font-size:2.5em; display:inline-block;">00:00</div></div>
+            <div style="flex: 1; font-size: 1.5em; text-align: right;">
+                <div>Round: <span id="lblRound" style="color:var(--primary-color);">?</span></div>
+                <div>Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span></div>
+            </div>
+        </div>
+        
+        <div class="panel flex-col h-full" style="padding: 10px 20px; flex: 1;">
+            <div class="grid grid-cols-2 flex-1">
+                <div class="panel">
+                    <h2>Scan Card</h2>
+
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label>Card IDs (one per line, or space separated):</label>
+                        <textarea id="txtCardIds" rows="5" style="width: 100%; font-size: 1.2em; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #444; color: var(--text-main);" placeholder="e.g.&#10;1-A&#10;1-1"></textarea>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label>Found By Class:</label>
+                        <select id="selClass" style="font-size: 1.2em; padding: 5px; width: 100%;">
+                            <option value="27">Class 27</option>
+                            <option value="28">Class 28</option>
+                            <option value="29">Class 29</option>
+                            <option value="30">Class 30</option>
+                            <option value="31">Class 31</option>
+                        </select>
+                    </div>
+
+                    <button onclick="registerCard()" style="width: 100%;">Register Card</button>
+                </div>
+
+                <div class="panel flex-col">
+                    <h2>Recent Scans</h2>
+                    <div class="scrollable-panel flex-1">
+                        <table id="tblHistory">
+                            <tr><th>Class</th><th>Card ID</th><th>Type</th><th>Status</th><th>Action</th></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ?國盒 ? ?𨰰 -->
+    <div id="connectionDot" class="connection-indicator"></div>
+
+    <script src="js/socket-client.js"></script>
+    <script>
+        // ?國盒 ?�� ?𨰰�
+        socket.on('connect', () => {
+            document.getElementById('connectionDot').classList.add('connected');
+            document.getElementById('connectionDot').classList.remove('disconnected');
+        });
+        socket.on('disconnect', () => {
+            document.getElementById('connectionDot').classList.remove('connected');
+            document.getElementById('connectionDot').classList.add('disconnected');
+        });
+
+        const phaseNames = {1:'Plan', 2:'Mission', 3:'Return', 4:'Restoration', 5:'Submission'};
+
+        function onStateUpdate(state) {
+            document.getElementById('lblRound').innerText = state.current_round;
+            document.getElementById('lblPhase').innerText = `${state.current_phase} (${phaseNames[state.current_phase] || ''})`;
+            
+            // Update history list
+            if(state.cards) {
+                const currentRoundCards = state.cards.filter(c => c.round == state.current_round);
+                // Group by class
+                const classGroups = { 27: [], 28: [], 29: [], 30: [], 31: [] };
+                let sortedCards = currentRoundCards.sort((a,b) => {
+                    if(a.type !== b.type) return a.type.localeCompare(b.type);
+                    return a.card_id.localeCompare(b.card_id);
+                });
+                sortedCards.forEach(c => {
+                    if (classGroups[c.owner_class_id]) classGroups[c.owner_class_id].push(c);
+                });
+
+                let html = '<tr><th>Class</th><th>Card ID</th><th>Type</th><th>Status</th><th>Action</th></tr>';
+                Object.keys(classGroups).sort().forEach(clsId => {
+                    const cards = classGroups[clsId];
+                    if (cards.length === 0) {
+                        html += `<tr>
+                            <td style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td>
+                            <td style="color:var(--text-muted);">-</td>
+                            <td style="color:var(--text-muted);">-</td>
+                            <td style="color:var(--text-muted);">-</td>
+                            <td style="color:var(--text-muted);">-</td>
+                        </tr>`;
+                    } else {
+                        cards.forEach((card, idx) => {
+                            const canUndo = card.status === 'PENDING';
+                            html += `<tr>
+                                ${idx === 0 ? `<td rowspan="${cards.length}" style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td>` : ''}
+                                <td style="font-weight:bold;">${card.card_id}</td>
+                                <td>${card.type}</td>
+                                <td>${card.status}</td>
+                                <td>${canUndo ? `<button onclick="undoCard('${card.card_id}')" style="padding: 2px 10px; font-size: 0.9em; background: #8b0000;">Undo</button>` : '-'}</td>
+                            </tr>`;
+                        });
+                    }
+                });
+                document.getElementById('tblHistory').innerHTML = html;
+            }
+        }
+
+        socket.on('clientC:addCardsResult', (result) => {
+            if (result.errors && result.errors.length > 0) {
+                alert(`Registered ${result.successes} cards.\n\nErrors:\n` + result.errors.join('\n'));
+            } else if (result.successes > 0) {
+                // Flash success
+                const overlay = document.getElementById('mainOverlay');
+                overlay.classList.add('success-flash');
+                setTimeout(() => overlay.classList.remove('success-flash'), 500);
+            }
+        });
+
+        // Timer Logic
+        socket.on('timer:tick', (data) => {
+            const min = Math.floor(data.remaining / 60);
+            const sec = data.remaining % 60;
+            const display = document.getElementById('timerDisplay');
+            display.innerText = `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+            if (data.remaining === 0 && !data.running) display.classList.add('blinking');
+            else display.classList.remove('blinking');
+        });
+
+        function registerCard() {
+            const rawText = document.getElementById('txtCardIds').value;
+            const cls = document.getElementById('selClass').value;
+            const currentRound = document.getElementById('lblRound').innerText;
+            
+            // split by newline, space, or comma
+            const cardIds = rawText.split(/[\n\s,]+/).filter(Boolean);
+
+            if(cardIds.length === 0) {
+                alert("Please enter at least one Card ID.");
+                return;
+            }
+
+            socket.emit('clientC:addCards', {
+                card_ids: cardIds,
+                owner_class_id: cls
+            });
+
+            // Clear input
+            document.getElementById('txtCardIds').value = '';
+            document.getElementById('txtCardIds').focus();
+        }
+
+        function undoCard(cardId) {
+            if(confirm(`Are you sure you want to undo registration for ${cardId}?`)) {
+                socket.emit('clientC:deleteCard', cardId);
+            }
+        }
+    </script>
+</body>
+</html>

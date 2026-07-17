@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Smuggler Exchange - Client D</title>
+    <link rel="stylesheet" href="css/theme.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        .warning-banner {
+            display: none;
+            background: rgba(139, 0, 0, 0.85);
+            border: 1px solid #ff4444;
+            color: #f0e6d2;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            text-align: center;
+        }
+        .warning-banner.visible {
+            display: block;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; color: var(--primary-color); }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay">
+        <div class="panel" style="display:flex; justify-content:space-between; align-items:center; padding: 10px 20px;">
+            <div style="flex: 1; text-align: left;"><h1 style="margin-bottom:0;">Smuggler Exchange</h1></div>
+            <div style="flex: 1; text-align: center;"><div class="timer" id="timerDisplay" style="font-size:2.5em; display:inline-block;">00:00</div></div>
+            <div style="flex: 1; font-size: 1.5em; text-align: right;">
+                <div>Round: <span id="lblRound" style="color:var(--primary-color);">?</span></div>
+                <div>Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span></div>
+            </div>
+        </div>
+        
+        <div class="panel flex-col h-full" style="padding: 10px 20px; flex: 1;">
+            <div class="grid grid-cols-2 flex-1">
+                <div class="panel flex-col">
+                    <h2>Exchange Control</h2>
+
+                    <!-- 경고 배너: alert() 대신 여기에 표시 -->
+                    <div id="warningBanner" class="warning-banner"></div>
+
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                        <!-- Smuggler Side -->
+                        <div class="panel flex-1" style="background: rgba(0,0,0,0.3); border: 1px solid var(--primary-color); box-shadow: inset 0 0 15px rgba(212,175,55,0.1); padding: 15px;">
+                            <h3 style="margin-top:0; color:var(--primary-color); text-align:center; font-size: 1.3em; letter-spacing: 1px;">SMUGGLER</h3>
+                            
+                            <label style="color:var(--text-muted); font-size:0.9em;">Acting Class:</label>
+                            <select id="selMyClass" style="margin-bottom:15px; margin-top:5px;" onchange="onMyClassChange()">
+                                <option value="">-- Select Class --</option>
+                                <option value="27">Class 27</option>
+                                <option value="28">Class 28</option>
+                                <option value="29">Class 29</option>
+                                <option value="30">Class 30</option>
+                                <option value="31">Class 31</option>
+                            </select>
+
+                            <label style="color:var(--text-muted); font-size:0.9em;">Give Card:</label>
+                            <select id="selMyCard" style="margin-top:5px;">
+                                <option value="">-- Select My Card --</option>
+                            </select>
+                        </div>
+
+                        <!-- Exchange Separator -->
+                        <div style="font-size: 1.2em; color: var(--text-muted); animation: pulse 2s infinite; text-shadow: 0 0 10px rgba(255,255,255,0.1); letter-spacing: 2px;">
+                            TO
+                        </div>
+
+                        <!-- Target Side -->
+                        <div class="panel flex-1" style="background: rgba(0,0,0,0.3); border: 1px solid #440000; box-shadow: inset 0 0 15px rgba(68,0,0,0.4); padding: 15px;">
+                            <h3 style="margin-top:0; color:#fff; text-align:center; font-size: 1.3em; letter-spacing: 1px;">TARGET</h3>
+                            
+                            <label style="color:var(--text-muted); font-size:0.9em;">Victim Class:</label>
+                            <select id="selTargetClass" style="margin-bottom:15px; margin-top:5px;" onchange="updateCardOptions()">
+                                <option value="">-- Select Target --</option>
+                                <option value="27">Class 27</option>
+                                <option value="28">Class 28</option>
+                                <option value="29">Class 29</option>
+                                <option value="30">Class 30</option>
+                                <option value="31">Class 31</option>
+                            </select>
+
+                            <label style="color:var(--text-muted); font-size:0.9em;">Steal Card:</label>
+                            <select id="selTargetCard" style="margin-top:5px;">
+                                <option value="">-- Select Target Card --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 15px;">
+                        <button onclick="executeExchange()" style="flex: 2; padding: 15px; background: #440000; border: 1px solid #330000; color: #fff; font-size: 1.3em; font-weight: bold; border-radius: 8px; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 0 10px rgba(68,0,0,0.5);" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 0 20px rgba(68,0,0,0.8)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 0 10px rgba(68,0,0,0.5)';">Execute Exchange</button>
+                        <button onclick="executePass()" style="flex: 1; padding: 15px; background: #333; border: 1px solid #555; color: #aaa; font-size: 1.1em; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='#444';" onmouseout="this.style.background='#333';">Pass Turn</button>
+                    </div>
+
+                </div>
+
+                <div class="panel flex-col">
+                    <h2>Pending Pool</h2>
+                    <div class="scrollable-panel flex-1">
+                        <table id="tblPending">
+                            <tr><th>Class</th><th>Card ID</th><th>Type</th><th>Status</th></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/socket-client.js"></script>
+    <script>
+        let currentCards = [];
+        let alertShown = false;
+        const phaseNames = {1:'Plan', 2:'Mission', 3:'Return', 4:'Restoration', 5:'Submission'};
+
+        // Timer Logic
+        socket.on('timer:tick', (data) => {
+            const min = Math.floor(data.remaining / 60);
+            const sec = data.remaining % 60;
+            const display = document.getElementById('timerDisplay');
+            if(display) {
+                display.innerText = `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+                if (data.remaining === 0 && !data.running) display.classList.add('blinking');
+                else display.classList.remove('blinking');
+            }
+        });
+
+        function onStateUpdate(state) {
+            if(document.getElementById('lblRound')) document.getElementById('lblRound').innerText = state.current_round;
+            if(document.getElementById('lblPhase')) document.getElementById('lblPhase').innerText = `${state.current_phase} (${phaseNames[state.current_phase] || ''})`;
+
+            if(state.cards) {
+                // PENDING and LOCKED cards
+                currentCards = state.cards.filter(c => c.round == state.current_round && (c.status === 'PENDING' || c.status === 'LOCKED'));
+                
+                const classGroups = { 27: [], 28: [], 29: [], 30: [], 31: [] };
+                let sortedCards=currentCards.sort((a,b)=>{if(a.type!==b.type) return a.type.localeCompare(b.type);return a.card_id.localeCompare(b.card_id);});sortedCards.forEach(c => {
+                    if (classGroups[c.owner_class_id]) classGroups[c.owner_class_id].push(c);
+                });
+
+                let html = '<tr><th>Class</th><th>Card ID</th><th>Type</th><th>Status</th></tr>';
+                Object.keys(classGroups).sort().forEach(clsId => {
+                    const cards = classGroups[clsId];
+                    if (cards.length === 0) {
+                        html += `<tr><td style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td></tr>`;
+                    } else {
+                        cards.forEach((card, idx) => {
+                            html += `<tr>
+                                ${idx === 0 ? `<td rowspan="${cards.length}" style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td>` : ''}
+                                <td style="font-weight:bold;">${card.card_id}</td>
+                                <td>${card.type}</td>
+                                <td>${card.status}</td>
+                            </tr>`;
+                        });
+                    }
+                });
+                document.getElementById('tblPending').innerHTML = html;
+
+                updateCardOptions();
+            }
+        }
+
+        // Class change handler
+        function onMyClassChange() {
+            alertShown = false;
+            document.getElementById('warningBanner').classList.remove('visible');
+            updateCardOptions();
+        }
+
+        function updateCardOptions() {
+            const myClass = document.getElementById('selMyClass').value;
+            const targetClass = document.getElementById('selTargetClass').value;
+
+            const myCardSel = document.getElementById('selMyCard');
+            const targetCardSel = document.getElementById('selTargetCard');
+
+            // Save current selection if possible
+            const oldMyCard = myCardSel.value;
+            const oldTargetCard = targetCardSel.value;
+
+            myCardSel.innerHTML = '<option value="">-- Select My Card --</option>';
+            targetCardSel.innerHTML = '<option value="">-- Select Target Card --</option>';
+
+            // Populate my cards
+            if(myClass) {
+                const myAvailable = currentCards.filter(c => c.owner_class_id == myClass && c.status === 'PENDING');
+                if(myAvailable.length === 0 && !alertShown) {
+                    // Show alert banner
+                    alertShown = true;
+                    const banner = document.getElementById('warningBanner');
+                    banner.textContent = `Class ${myClass} has NO pending cards. They must Pass.`;
+                    banner.classList.add('visible');
+                }
+                myAvailable.forEach(c => {
+                    myCardSel.innerHTML += `<option value="${c.card_id}">${c.card_id} (${c.type})</option>`;
+                });
+            }
+
+            // Populate target cards
+            if(targetClass) {
+                const targetAvailable = currentCards.filter(c => c.owner_class_id == targetClass && c.status === 'PENDING');
+                targetAvailable.forEach(c => {
+                    targetCardSel.innerHTML += `<option value="${c.card_id}">${c.card_id} (${c.type})</option>`;
+                });
+            }
+
+            myCardSel.value = oldMyCard || '';
+            targetCardSel.value = oldTargetCard || '';
+        }
+
+        function executeExchange() {
+            const myClass = document.getElementById('selMyClass').value;
+            const myCard = document.getElementById('selMyCard').value;
+            const targetClass = document.getElementById('selTargetClass').value;
+            const targetCard = document.getElementById('selTargetCard').value;
+
+            if(!myClass || !myCard || !targetClass || !targetCard) {
+                alert("Please select all fields for exchange.");
+                return;
+            }
+
+            if(myClass === targetClass) {
+                alert("Cannot exchange with yourself.");
+                return;
+            }
+
+            if(confirm(`Confirm Exchange: Class ${myClass} gives [${myCard}] and steals [${targetCard}] from Class ${targetClass}?`)) {
+                socket.emit('clientD:exchangeCards', {
+                    my_class_id: myClass,
+                    my_card_id: myCard,
+                    target_class_id: targetClass,
+                    target_card_id: targetCard
+                });
+                
+                // Clear selections
+                document.getElementById('selMyClass').value = '';
+                document.getElementById('selTargetClass').value = '';
+                alertShown = false;
+                document.getElementById('warningBanner').classList.remove('visible');
+                updateCardOptions();
+            }
+        }
+
+        function executePass() {
+            const myClass = document.getElementById('selMyClass').value;
+            if(!myClass) {
+                alert("Select acting class first.");
+                return;
+            }
+            if(confirm(`Class ${myClass} passes their turn?`)) {
+                alert(`Class ${myClass} passed.`);
+                document.getElementById('selMyClass').value = '';
+                alertShown = false;
+                document.getElementById('warningBanner').classList.remove('visible');
+                updateCardOptions();
+            }
+        }
+    </script>
+</body>
+</html>
