@@ -208,6 +208,10 @@ io.on('connection', (socket) => {
         socket.emit('hints:data', classHints);
     });
 
+    socket.on('getBoneMap', () => {
+        socket.emit('boneMap:data', boneCardMap);
+    });
+
     // ══════════════════════════════════════════
     // Admin (Client X) Events
     // ══════════════════════════════════════════

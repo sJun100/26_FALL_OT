@@ -100,14 +100,14 @@
 
                 </div>
 
-                <div class="panel flex-col">
-                    <h2>Pending Pool</h2>
-                    <div class="scrollable-panel flex-1">
-                        <table id="tblPending">
-                            <tr><th>Class</th><th>Card ID</th><th>Type</th><th>Status</th></tr>
-                        </table>
+                    <div class="panel flex-col">
+                        <h2>Pending Pool</h2>
+                        <div class="scrollable-panel flex-1">
+                            <table id="tblPending">
+                                <tr><th>Class</th><th>Card ID</th><th>Type</th><th>Contents</th><th>Status</th></tr>
+                            </table>
+                        </div>
                     </div>
-                </div>
             </div>
         </div>
     </div>
@@ -130,6 +130,32 @@
             }
         });
 
+        // Fetch bone map on connect
+        socket.on('connect', () => {
+            socket.emit('getBoneMap');
+        });
+
+        window.boneMap = {};
+        socket.on('boneMap:data', (map) => {
+            window.boneMap = map;
+            if(window.gameState) onStateUpdate(window.gameState); // Re-render if state already loaded
+        });
+
+        function getCardContentsHTML(cardId, type) {
+            if (type !== 'BONE' || !window.boneMap[cardId]) return '-';
+            const b = window.boneMap[cardId];
+            return `<img src="resources/skull.png" style="height:1.2em; vertical-align:middle;"> ${b.skull} &nbsp; ` +
+                   `<img src="resources/torso.png" style="height:1.2em; vertical-align:middle;"> ${b.torso} &nbsp; ` +
+                   `<img src="resources/leg.png" style="height:1.2em; vertical-align:middle;"> ${b.leg} &nbsp; ` +
+                   `<img src="resources/tail.png" style="height:1.2em; vertical-align:middle;"> ${b.tail}`;
+        }
+
+        function getCardContentsText(cardId, type) {
+            if (type !== 'BONE' || !window.boneMap[cardId]) return '-';
+            const b = window.boneMap[cardId];
+            return `(Skull:${b.skull} Torso:${b.torso} Leg:${b.leg} Tail:${b.tail})`;
+        }
+
         function onStateUpdate(state) {
             if(document.getElementById('lblRound')) document.getElementById('lblRound').innerText = state.current_round;
             if(document.getElementById('lblPhase')) document.getElementById('lblPhase').innerText = `${state.current_phase} (${phaseNames[state.current_phase] || ''})`;
@@ -143,17 +169,18 @@
                     if (classGroups[c.owner_class_id]) classGroups[c.owner_class_id].push(c);
                 });
 
-                let html = '<tr><th>Class</th><th>Card ID</th><th>Type</th><th>Status</th></tr>';
+                let html = '<tr><th>Class</th><th>Card ID</th><th>Type</th><th>Contents</th><th>Status</th></tr>';
                 Object.keys(classGroups).sort().forEach(clsId => {
                     const cards = classGroups[clsId];
                     if (cards.length === 0) {
-                        html += `<tr><td style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td></tr>`;
+                        html += `<tr><td style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td></tr>`;
                     } else {
                         cards.forEach((card, idx) => {
                             html += `<tr>
                                 ${idx === 0 ? `<td rowspan="${cards.length}" style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td>` : ''}
                                 <td style="font-weight:bold;">${card.card_id}</td>
                                 <td>${card.type}</td>
+                                <td>${getCardContentsHTML(card.card_id, card.type)}</td>
                                 <td>${card.status}</td>
                             </tr>`;
                         });
@@ -197,7 +224,8 @@
                     banner.classList.add('visible');
                 }
                 myAvailable.forEach(c => {
-                    myCardSel.innerHTML += `<option value="${c.card_id}">${c.card_id} (${c.type})</option>`;
+                    const contents = getCardContentsText(c.card_id, c.type);
+                    myCardSel.innerHTML += `<option value="${c.card_id}">${c.card_id} (${c.type}) ${contents !== '-' ? contents : ''}</option>`;
                 });
             }
 
@@ -205,7 +233,8 @@
             if(targetClass) {
                 const targetAvailable = currentCards.filter(c => c.owner_class_id == targetClass && c.status === 'PENDING');
                 targetAvailable.forEach(c => {
-                    targetCardSel.innerHTML += `<option value="${c.card_id}">${c.card_id} (${c.type})</option>`;
+                    const contents = getCardContentsText(c.card_id, c.type);
+                    targetCardSel.innerHTML += `<option value="${c.card_id}">${c.card_id} (${c.type}) ${contents !== '-' ? contents : ''}</option>`;
                 });
             }
 
