@@ -32,9 +32,12 @@
         <div class="panel" style="display:flex; justify-content:space-between; align-items:center; padding: 10px 20px;">
             <div style="flex: 1; text-align: left;"><h1 style="margin-bottom:0;">Smuggler Exchange</h1></div>
             <div style="flex: 1; text-align: center;"><div class="timer" id="timerDisplay" style="font-size:2.5em; display:inline-block;">00:00</div></div>
-            <div style="flex: 1; font-size: 1.5em; text-align: right;">
-                <div>Round: <span id="lblRound" style="color:var(--primary-color);">?</span></div>
-                <div>Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span></div>
+            <div style="flex: 1; font-size: 1.5em; display: flex; align-items: center; justify-content: flex-end; gap: 15px;">
+                <button id="btnReadyToggle" class="btn-ready" onclick="toggleReady()">Ready</button>
+                <div style="text-align: right;">
+                    <div>Round: <span id="lblRound" style="color:var(--primary-color);">?</span></div>
+                    <div>Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span></div>
+                </div>
             </div>
         </div>
         
@@ -289,6 +292,38 @@
                 updateCardOptions();
             }
         }
+
+        // ── Ready System (C-06) ──
+        const myRoleId = 'Smuggler';
+        window.currentReadyStatus = {};
+        function updateReadyUI() {
+            const btn = document.getElementById('btnReadyToggle');
+            if(!btn) return;
+            if(window.currentReadyStatus[myRoleId] !== undefined) {
+                const isReady = window.currentReadyStatus[myRoleId];
+                if(isReady) {
+                    btn.classList.add('ready-ok');
+                    btn.innerText = 'Ready OK';
+                } else {
+                    btn.classList.remove('ready-ok');
+                    btn.innerText = 'Ready';
+                }
+            } else {
+                btn.classList.remove('ready-ok');
+                btn.innerText = 'Ready';
+            }
+        }
+        function toggleReady() {
+            const isReady = !(window.currentReadyStatus[myRoleId] || false);
+            socket.emit('client:setReady', { class_id: myRoleId, isReady: isReady });
+        }
+        socket.on('connect', () => {
+            socket.emit('getReadyStatus');
+        });
+        socket.on('ready:update', (status) => {
+            window.currentReadyStatus = status;
+            updateReadyUI();
+        });
     </script>
 </body>
 </html>

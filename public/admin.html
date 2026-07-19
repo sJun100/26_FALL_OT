@@ -72,6 +72,13 @@
                     </div>
                 </div>
 
+                <div class="panel">
+                    <h2>Ready Status</h2>
+                    <div id="pnlReadyGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9em; text-align: center;">
+                        <!-- JS will populate -->
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-2">
                     <div class="panel" style="text-align:center;">
                         <button onclick="window.open('/api/export','_blank')" style="font-size: 0.9em;">Export Log</button>
@@ -120,6 +127,8 @@
 
     <script src="js/socket-client.js"></script>
     <script>
+        window.isAdmin = true;
+        
         let currentRound = '1';
         const phaseNames = {1:'Plan', 2:'Mission', 3:'Return', 4:'Restoration', 5:'Submission'};
 
@@ -127,6 +136,8 @@
             currentRound = state.current_round || '1';
             document.getElementById('lblRound').innerText = state.current_round;
             document.getElementById('lblPhase').innerText = `${state.current_phase} (${phaseNames[state.current_phase] || ''})`;
+            document.getElementById('selRound').value = state.current_round || '1';
+            document.getElementById('selPhase').value = state.current_phase || '1';
 
             // Classes table
             if (state.classes) {
@@ -196,6 +207,7 @@
                 const defaults = { 1: 3, 2: 9, 3: 1, 4: 4, 5: 1 };
                 if (defaults[p]) {
                     document.getElementById('timerMinutes').value = defaults[p];
+                    startTimer(); // Auto start the timer
                 }
             }
         }
@@ -254,9 +266,40 @@
 
         function startTimer() { socket.emit('admin:startTimer', document.getElementById('timerMinutes').value); }
         function stopTimer() { socket.emit('admin:stopTimer'); }
+        socket.on('state:update', onStateUpdate);
 
         socket.on('connect', () => {
-            socket.emit('getTimer');
+            socket.emit('getState');
+            socket.emit('getReadyStatus');
+        });
+
+        socket.on('ready:update', (status) => {
+            const pnl = document.getElementById('pnlReadyGrid');
+            if(!pnl) return;
+            pnl.innerHTML = '';
+            
+            const orderedKeys = ['27', '28', '29', '30', '31', 'Excavator', 'Researcher', 'Smuggler'];
+            orderedKeys.forEach(k => {
+                const s = status[k];
+                const div = document.createElement('div');
+                div.style.padding = '5px';
+                div.style.border = '1px solid #555';
+                div.style.borderRadius = '4px';
+                div.style.transition = 'all 0.3s ease';
+                if(s) {
+                    div.style.background = '#ffffff';
+                    div.style.color = '#000';
+                    div.style.fontWeight = 'bold';
+                    div.innerText = `${k} OK`;
+                    div.style.borderColor = '#ffffff';
+                    div.style.boxShadow = '0 0 8px rgba(255, 255, 255, 0.4)';
+                } else {
+                    div.style.background = 'linear-gradient(145deg, #2a2a2a, #1a1a1a)';
+                    div.style.color = 'var(--text-muted)';
+                    div.innerText = `${k} Wait`;
+                }
+                pnl.appendChild(div);
+            });
         });
 
         // Reveal functions

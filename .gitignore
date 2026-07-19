@@ -4,3 +4,17 @@ node_modules/
 .DS_Store
 .vscode/
 resources/
+
+# Playwright generated artifacts
+playwright/
+test-results/
+playwright-report/
+traces/
+videos/
+screenshots/
+logs/
+*.trace
+*.webm
+*.png
+*.zip
+.cache/

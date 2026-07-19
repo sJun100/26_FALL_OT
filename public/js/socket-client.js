@@ -1,6 +1,7 @@
 const socket = io();
 
 let gameState = {};
+let lastRound = null;
 
 // When server sends state update
 socket.on('state:update', (state) => {
@@ -9,7 +10,36 @@ socket.on('state:update', (state) => {
     if (typeof window.onStateUpdate === 'function') {
         window.onStateUpdate(state);
     }
+
+    // Round Transition Animation
+    if (!window.isAdmin && lastRound !== null && state.current_round && state.current_round != lastRound) {
+        showRoundTransition(state.current_round);
+    }
+    lastRound = state.current_round;
 });
+
+function showRoundTransition(round) {
+    let overlay = document.getElementById('roundTransitionOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'roundTransitionOverlay';
+        overlay.className = 'round-transition-overlay';
+        overlay.innerHTML = `<h1 class="round-transition-text" id="roundTransitionText">ROUND ${round}</h1>`;
+        document.body.appendChild(overlay);
+    } else {
+        document.getElementById('roundTransitionText').innerText = `ROUND ${round}`;
+    }
+    
+    overlay.classList.add('active');
+    const text = document.getElementById('roundTransitionText');
+    text.classList.remove('animate');
+    void text.offsetWidth; // trigger reflow
+    text.classList.add('animate');
+    
+    setTimeout(() => {
+        overlay.classList.remove('active');
+    }, 3500);
+}
 
 // Request initial state on connect
 socket.on('connect', () => {

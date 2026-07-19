@@ -64,10 +64,13 @@
         <div class="panel" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
             <div style="flex: 1; text-align: left;"><h1 id="classTitle" style="margin-bottom:0;">Class Dashboard</h1></div>
             <div style="flex: 1; text-align: center;"><div class="timer" id="timerDisplay" style="font-size:2.5em; display:inline-block;">00:00</div></div>
-            <div style="flex: 1; font-size: 1.5em; text-align: right; position: relative;">
+            <div style="flex: 1; font-size: 1.5em; display: flex; align-items: center; justify-content: flex-end; gap: 15px; position: relative;">
                 <div id="alertBanner" class="alert-banner" style="display:none; position: absolute; left: 0; top: 50%; transform: translateY(-50%); z-index: 100;"></div>
-                <div>Round: <span id="lblRound" style="color:var(--primary-color);">?</span></div>
-                <div>Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span></div>
+                <button id="btnReadyToggle" class="btn-ready" onclick="toggleReady()">Ready</button>
+                <div style="text-align: right;">
+                    <div>Round: <span id="lblRound" style="color:var(--primary-color);">?</span></div>
+                    <div>Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span></div>
+                </div>
             </div>
         </div>
 
@@ -122,12 +125,30 @@
                 </div>
             </div>
             
-            <div class="panel flex-1 flex-col" style="padding: 10px;">
-                <h2 style="font-size: 1.1em;">Global Treasure Hunt Board</h2>
-                <div class="scrollable-panel flex-1">
-                    <table id="globalBoard" style="font-size:1em;">
-                        <tr><th>Class</th><th>Card ID</th><th>Type</th><th>Status</th></tr>
-                    </table>
+            <div class="flex-col" style="gap: 10px; flex: 1;">
+                <div class="panel flex-1 flex-col" style="padding: 10px; margin: 0;">
+                    <h2 style="font-size: 1.1em;">Past Restorations</h2>
+                    <div class="scrollable-panel flex-1">
+                        <table id="tblPastRestorations" style="width:100%; text-align:center; font-size:0.9em;">
+                            <tr>
+                                <th style="width:20%;">Round</th>
+                                <th style="width:15%;"><img src="resources/skull.png" style="height:1.2em; vertical-align:middle;" title="Skull"></th>
+                                <th style="width:15%;"><img src="resources/torso.png" style="height:1.2em; vertical-align:middle;" title="Torso"></th>
+                                <th style="width:15%;"><img src="resources/leg.png" style="height:1.2em; vertical-align:middle;" title="Leg"></th>
+                                <th style="width:15%;"><img src="resources/tail.png" style="height:1.2em; vertical-align:middle;" title="Tail"></th>
+                                <th style="width:20%;">Error Rate</th>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="panel flex-1 flex-col" style="padding: 10px; margin: 0;">
+                    <h2 style="font-size: 1.1em;">Global Treasure Hunt Board</h2>
+                    <div class="scrollable-panel flex-1">
+                        <table id="globalBoard" style="font-size:1em;">
+                            <tr><th>Class</th><th>Card ID</th><th>Type</th><th>Status</th></tr>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -247,6 +268,31 @@
                 document.getElementById('hintsList').innerHTML = hintsHtml;
             }
 
+            if (state.restorations) {
+                let restHtml = `<tr>
+                                <th style="width:20%;">Round</th>
+                                <th style="width:15%;"><img src="resources/skull.png" style="height:1.2em; vertical-align:middle;" title="Skull"></th>
+                                <th style="width:15%;"><img src="resources/torso.png" style="height:1.2em; vertical-align:middle;" title="Torso"></th>
+                                <th style="width:15%;"><img src="resources/leg.png" style="height:1.2em; vertical-align:middle;" title="Leg"></th>
+                                <th style="width:15%;"><img src="resources/tail.png" style="height:1.2em; vertical-align:middle;" title="Tail"></th>
+                                <th style="width:20%;">Error Rate</th>
+                            </tr>`;
+                const myRestorations = state.restorations.filter(r => r.class_id == myClassId).sort((a,b) => a.round - b.round);
+                myRestorations.forEach(r => {
+                    restHtml += `<tr>
+                        <td>Round ${r.round}</td>
+                        <td style="font-weight:bold; font-size:1.1em;">${r.skull_sub}</td>
+                        <td style="font-weight:bold; font-size:1.1em;">${r.torso_sub}</td>
+                        <td style="font-weight:bold; font-size:1.1em;">${r.leg_sub}</td>
+                        <td style="font-weight:bold; font-size:1.1em;">${r.tail_sub}</td>
+                        <td style="color:${r.error_rate !== null ? 'var(--primary-color)' : 'var(--text-muted)'}; font-weight:bold;">
+                            ${r.error_rate !== null ? r.error_rate + '%' : 'Pending'}
+                        </td>
+                    </tr>`;
+                });
+                document.getElementById('tblPastRestorations').innerHTML = restHtml;
+            }
+
             if(state.excavatorDistribution && Object.keys(state.excavatorDistribution).length > 0) {
                 let sackHtml = [];
                 for(const [classId, sackName] of Object.entries(state.excavatorDistribution)) {
@@ -309,12 +355,12 @@
             const delay = data.isFinal ? 3000 : 1000;
             
             sorted.forEach((r, i) => {
-                const isWinner = i === 0;
-                const rank = i + 1;
+                const rank = sorted.length - i;
+                const isWinner = rank === 1;
                 const card = document.createElement('div');
                 card.className = 'result-card' + (isWinner && data.isFinal ? ' winner' : '');
                 card.innerHTML = `<span>#${rank} Class ${r.class_id}</span><span>Error: ${r.error_rate}%</span>`;
-                container.appendChild(card);
+                container.prepend(card);
                 
                 setTimeout(() => card.classList.add('visible'), (i + 1) * delay);
             });
@@ -328,6 +374,38 @@
             if (phase == 4) { spawnParticles(); }
         }
         window.onPhaseSync = onPhaseSync;
+
+        // ── Ready System (C-06) ──
+        window.currentReadyStatus = {};
+        function updateReadyUI() {
+            const btn = document.getElementById('btnReadyToggle');
+            if(!btn) return;
+            if(myClassId && window.currentReadyStatus[myClassId] !== undefined) {
+                const isReady = window.currentReadyStatus[myClassId];
+                if(isReady) {
+                    btn.classList.add('ready-ok');
+                    btn.innerText = 'Ready OK';
+                } else {
+                    btn.classList.remove('ready-ok');
+                    btn.innerText = 'Ready';
+                }
+            } else {
+                btn.classList.remove('ready-ok');
+                btn.innerText = 'Ready';
+            }
+        }
+        function toggleReady() {
+            if(!myClassId) { alert("Please set class_id in URL."); return; }
+            const isReady = !(window.currentReadyStatus[myClassId] || false);
+            socket.emit('client:setReady', { class_id: myClassId, isReady: isReady });
+        }
+        socket.on('connect', () => {
+            socket.emit('getReadyStatus');
+        });
+        socket.on('ready:update', (status) => {
+            window.currentReadyStatus = status;
+            updateReadyUI();
+        });
 
         function spawnParticles() {
             const shapes = ['✨', '⭐', '🌟', '✦'];
@@ -350,6 +428,7 @@
 
 
         function submitFossil() {
+            console.log("submitFossil called!");
             const h = parseInt(document.getElementById('subH').value) || 0;
             const b = parseInt(document.getElementById('subB').value) || 0;
             const l = parseInt(document.getElementById('subL').value) || 0;

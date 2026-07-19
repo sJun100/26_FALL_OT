@@ -192,7 +192,28 @@ function getFullState(callback) {
 let timerInterval = null;
 let timerRemaining = 0;
 let timerRunning = false;
+let revealTimer = null;
 let excavatorDistribution = {};
+let readyStatus = { '27': false, '28': false, '29': false, '30': false, '31': false, 'Excavator': false, 'Researcher': false, 'Smuggler': false };
+
+function startServerTimer(minutes) {
+    logEvent('System', `Started timer for ${minutes} minutes`);
+    timerRemaining = parseInt(minutes) * 60;
+    timerRunning = true;
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        if (timerRemaining > 0) {
+            timerRemaining--;
+            io.emit('timer:tick', { remaining: timerRemaining, running: true });
+        } else {
+            if (timerInterval) clearInterval(timerInterval);
+            timerRunning = false;
+            logEvent('System', `Timer ended`);
+            io.emit('timer:tick', { remaining: 0, running: false });
+        }
+    }, 1000);
+    io.emit('timer:tick', { remaining: timerRemaining, running: true });
+}
 
 io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
@@ -212,13 +233,29 @@ io.on('connection', (socket) => {
         socket.emit('boneMap:data', boneCardMap);
     });
 
-    // ══════════════════════════════════════════
-    // Admin (Client X) Events
-    // ══════════════════════════════════════════
+    // ── Ready System (C-06) ──
+    socket.on('client:setReady', (data) => {
+        const { class_id, isReady } = data;
+        if(readyStatus[class_id] !== undefined) {
+            readyStatus[class_id] = isReady;
+            io.emit('ready:update', readyStatus);
+        }
+    });
+
+    socket.on('getReadyStatus', () => {
+        socket.emit('ready:update', readyStatus);
+    });
+
+    // ── Admin (Client X) Events ──
 
     socket.on('admin:setPhase', (phase) => {
         logEvent('Admin', `Changed Phase to ${phase}`);
         if (phase == 1) excavatorDistribution = {};
+        
+        // Reset ready status
+        Object.keys(readyStatus).forEach(k => readyStatus[k] = false);
+        io.emit('ready:update', readyStatus);
+
         db.run(`UPDATE game_state SET value = ? WHERE key = 'current_phase'`, [phase.toString()], () => {
             if (phase == 4) {
                 // FIX for C-03: use boneCardMap for accurate bone distribution
@@ -267,9 +304,15 @@ io.on('connection', (socket) => {
     socket.on('admin:setRound', (round) => {
         logEvent('Admin', `Changed Round to ${round}`);
         excavatorDistribution = {}; // Reset distributions on new round
+        
+        // Reset ready status
+        Object.keys(readyStatus).forEach(k => readyStatus[k] = false);
+        io.emit('ready:update', readyStatus);
+
         db.run(`UPDATE game_state SET value = ? WHERE key = 'current_round'`, [round.toString()], () => {
             // Also reset phase to 1 when changing round
             db.run(`UPDATE game_state SET value = '1' WHERE key = 'current_phase'`, () => {
+                startServerTimer(3); // Auto start 3 min timer for Phase 1
                 getFullState(state => io.emit('state:update', state));
             });
         });
@@ -300,22 +343,7 @@ io.on('connection', (socket) => {
 
     // ── Timer system (C-05) ──
     socket.on('admin:startTimer', (minutes) => {
-        logEvent('Admin', `Started timer for ${minutes} minutes`);
-        timerRemaining = parseInt(minutes) * 60;
-        timerRunning = true;
-        if (timerInterval) clearInterval(timerInterval);
-        timerInterval = setInterval(() => {
-            if (timerRemaining > 0) {
-                timerRemaining--;
-                io.emit('timer:tick', { remaining: timerRemaining, running: true });
-            } else {
-                if (timerInterval) clearInterval(timerInterval);
-                timerRunning = false;
-                logEvent('System', `Timer ended`);
-                io.emit('timer:tick', { remaining: 0, running: false });
-            }
-        }, 1000);
-        io.emit('timer:tick', { remaining: timerRemaining, running: true });
+        startServerTimer(minutes);
     });
 
     socket.on('admin:stopTimer', () => {
@@ -329,23 +357,53 @@ io.on('connection', (socket) => {
         socket.emit('timer:tick', { remaining: timerRemaining, running: timerRunning });
     });
 
+    function autoAdvanceRound() {
+        db.get(`SELECT value FROM game_state WHERE key = 'current_round'`, (err, row) => {
+            let currentRound = row ? parseInt(row.value) : 1;
+            if (currentRound < 6) {
+                currentRound++;
+                db.run(`UPDATE game_state SET value = ? WHERE key = 'current_round'`, [currentRound], () => {
+                    db.run(`UPDATE game_state SET value = ? WHERE key = 'current_phase'`, [1], () => {
+                        logEvent('Admin', `Auto-advanced to Round ${currentRound} Phase 1 after reveal`);
+                        Object.keys(readyStatus).forEach(k => readyStatus[k] = false);
+                        getFullState((state) => {
+                            io.emit('state:update', state);
+                            io.emit('ready:update', readyStatus);
+                            
+                            // Auto-start timer for phase 1 (5 minutes)
+                            startServerTimer(5);
+                        });
+                    });
+                });
+            }
+        });
+    }
+
     // ── Result Reveal (C-07) ──
     socket.on('admin:revealResults', (data) => {
         logEvent('Admin', `Revealed rankings`);
         const { round, isFinal } = data;
         db.all(
-            `SELECT class_id, error_rate FROM restoration_history WHERE round = ? AND is_locked = 1 ORDER BY error_rate DESC`,
+            `SELECT class_id, error_rate FROM restoration_history WHERE round = ? AND is_locked = 1 ORDER BY error_rate DESC, id DESC`,
             [round],
             (err, rows) => {
                 if (rows && rows.length > 0) {
                     io.emit('reveal:show', { results: rows, isFinal: isFinal });
+                    
+                    if (revealTimer) clearTimeout(revealTimer);
+                    revealTimer = setTimeout(() => {
+                        io.emit('reveal:hide');
+                        autoAdvanceRound();
+                    }, 10000);
                 }
             }
         );
     });
 
     socket.on('admin:hideResults', () => {
+        if (revealTimer) clearTimeout(revealTimer);
         io.emit('reveal:hide');
+        autoAdvanceRound();
     });
 
     // ── Approval workflow -> Lock workflow (Task 14) ──

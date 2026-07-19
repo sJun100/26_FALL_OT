@@ -220,3 +220,73 @@ th {
     background-color: #440000;
     box-shadow: 0 0 6px rgba(68, 0, 0, 0.6);
 }
+
+/* Round Transition Animation */
+@keyframes roundTransition {
+    0% { transform: translate(-50%, -50%) scale(5); opacity: 0; }
+    20% { transform: translate(-50%, -50%) scale(1); opacity: 1; text-shadow: 0 0 50px var(--primary-color); }
+    80% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; text-shadow: 0 0 20px var(--primary-color); }
+    100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+}
+.round-transition-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 99999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+.round-transition-overlay.active {
+    opacity: 1;
+}
+.round-transition-text {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 8rem;
+    font-weight: 900;
+    color: var(--primary-color);
+    font-family: 'Georgia', serif;
+    letter-spacing: 10px;
+    margin: 0;
+    padding: 0;
+    text-transform: uppercase;
+}
+.round-transition-text.animate {
+    animation: roundTransition 3.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+/* Ready Button Premium Styles */
+.btn-ready {
+    padding: 6px 16px !important;
+    font-size: 0.85em !important;
+    font-weight: bold;
+    border-radius: 20px !important;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    border: 2px solid #555 !important;
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a) !important;
+    color: #aaa !important;
+}
+.btn-ready:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 8px rgba(0,0,0,0.4);
+}
+.btn-ready:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+.btn-ready.ready-ok {
+    background: #ffffff !important;
+    color: #000 !important;
+    border-color: #ffffff !important;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
+
