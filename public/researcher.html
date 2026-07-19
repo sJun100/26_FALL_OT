@@ -85,15 +85,6 @@
 
     <script src="js/socket-client.js"></script>
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        let myClassId = urlParams.get('class_id');
-        if(!myClassId) {
-            myClassId = prompt("Enter Class ID (27, 28, 29, 30, 31):", "27");
-            if(myClassId) window.location.search = `?class_id=${myClassId}`;
-        }
-        document.getElementById('lblCurrentClass').innerText = `Class ${myClassId}`;
-        document.getElementById('selClass').value = myClassId;
-
         let isScanning = false;
         socket.on('connect', () => {
             document.getElementById('connectionDot').classList.add('connected');

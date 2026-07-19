@@ -351,7 +351,7 @@
             overlay.style.display = 'flex';
             container.innerHTML = '';
             
-            const sorted = data.results.sort((a,b) => a.error_rate - b.error_rate);
+            const sorted = data.results.sort((a,b) => b.error_rate - a.error_rate);
             const delay = data.isFinal ? 3000 : 1000;
             
             sorted.forEach((r, i) => {
