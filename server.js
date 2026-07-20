@@ -171,7 +171,11 @@ function getFullState(callback) {
                          ORDER BY r.round, r.error_rate ASC`,
                         [],
                         (err, restorationRows) => {
-                            state.restorations = restorationRows || [];
+                            const rows = restorationRows || [];
+                            state.restorations = rows; // For admin.html
+                            state.past_restorations = rows.filter(r => r.round < currentRound);
+                            state.current_restorations = rows.filter(r => r.round === currentRound).map(r => ({ ...r, error_rate: null }));
+                            
                             // Include sack info for current round
                             state.sacks = sackRewardsMap[currentRound.toString()] || {};
                             state.excavatorDistribution = excavatorDistribution;
@@ -388,13 +392,16 @@ io.on('connection', (socket) => {
             [round],
             (err, rows) => {
                 if (rows && rows.length > 0) {
-                    io.emit('reveal:show', { results: rows, isFinal: isFinal });
+                    io.emit('reveal:show', { results: rows, isFinal: isFinal, round: round });
                     
                     if (revealTimer) clearTimeout(revealTimer);
-                    revealTimer = setTimeout(() => {
-                        io.emit('reveal:hide');
-                        autoAdvanceRound();
-                    }, 10000);
+                    
+                    if (!isFinal) {
+                        revealTimer = setTimeout(() => {
+                            io.emit('reveal:hide', { isAdvancing: round < 6 });
+                            autoAdvanceRound();
+                        }, 8000);
+                    }
                 }
             }
         );
@@ -402,8 +409,11 @@ io.on('connection', (socket) => {
 
     socket.on('admin:hideResults', () => {
         if (revealTimer) clearTimeout(revealTimer);
-        io.emit('reveal:hide');
-        autoAdvanceRound();
+        db.get(`SELECT value FROM game_state WHERE key = 'current_round'`, (err, row) => {
+            let currentRound = row ? parseInt(row.value) : 1;
+            io.emit('reveal:hide', { isAdvancing: currentRound < 6 });
+            autoAdvanceRound();
+        });
     });
 
     // ── Approval workflow -> Lock workflow (Task 14) ──

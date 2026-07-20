@@ -13,6 +13,7 @@ body {
     margin: 0;
     padding: 0;
     font-family: 'Inter', sans-serif;
+    font-size: 1.05rem; /* UI Readability increase */
     color: var(--text-main);
     background-color: var(--bg-overlay);
     height: 100vh;
@@ -111,6 +112,7 @@ button {
     border-radius: 4px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    white-space: nowrap; /* Prevent unintended word-wrap */
 }
 
 button:hover {
@@ -167,6 +169,7 @@ th {
     letter-spacing: 0.5px;
     text-transform: uppercase;
     font-size: 0.9em;
+    white-space: nowrap; /* Prevent unintended word-wrap */
 }
 
 .timer {
@@ -231,7 +234,7 @@ th {
 .round-transition-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(10,8,5,0.95);
     z-index: 99999;
     display: flex;
     justify-content: center;
@@ -290,3 +293,35 @@ th {
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
 }
 
+/* Hint Card Text */
+.hint-text {
+    font-size: 1.25em;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: flex-start;
+}
+
+/* Result Reveal Cards */
+.result-card {
+    background: var(--panel-bg);
+    border: 2px solid var(--primary-color);
+    border-radius: 12px;
+    padding: 20px 30px;
+    margin: 10px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.5em;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.result-card.visible { opacity: 1; transform: translateY(0); }
+.result-card.winner {
+    border-color: #ffd700;
+    box-shadow: 0 0 30px rgba(255,215,0,0.5);
+    font-size: 2.3em;
+    transform: scale(1.05);
+    font-weight: bold;
+}
+.result-card.winner.visible { transform: scale(1.05) translateY(0); }
