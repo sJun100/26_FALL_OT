@@ -1,3 +1,10 @@
+function sortCards(cards) {
+    return cards.sort((a, b) => {
+        if (a.type !== b.type) return a.type.localeCompare(b.type);
+        return a.card_id.localeCompare(b.card_id, undefined, { numeric: true, sensitivity: 'base' });
+    });
+}
+
 const socket = io();
 
 let gameState = {};
@@ -75,19 +82,7 @@ socket.on('sync:card_exchanged', (data) => {
 
 // Responsive Scaling (Option 3)
 function applyScaling() {
-    const overlay = document.querySelector('.overlay');
-    if (!overlay) return;
-    
-    // Base design resolution
-    const baseWidth = 1920;
-    const baseHeight = 1080;
-    
-    // Calculate uniform scale to fit exactly in the window
-    const scale = Math.min(window.innerWidth / baseWidth, window.innerHeight / baseHeight);
-    
-    // Apply transform (centering is handled by body flex layout in theme.css)
-    overlay.style.transform = `scale(${scale})`;
-    overlay.style.transformOrigin = 'center center';
+    // Disabled fixed scaling to allow native fullscreen without margins
 }
 
 window.addEventListener('resize', applyScaling);

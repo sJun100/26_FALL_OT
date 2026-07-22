@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Smuggler Exchange - Client D</title>
@@ -17,32 +18,54 @@
             font-size: 1.1em;
             text-align: center;
         }
+
         .warning-banner.visible {
             display: block;
         }
+
         @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.1); opacity: 1; color: var(--primary-color); }
-            100% { transform: scale(1); opacity: 0.8; }
+            0% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+
+            50% {
+                transform: scale(1.1);
+                opacity: 1;
+                color: var(--primary-color);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="overlay">
         <div class="panel" style="display:flex; justify-content:space-between; align-items:center; padding: 10px 20px;">
-            <div style="flex: 1; text-align: left;"><h1 style="margin-bottom:0;">Smuggler Exchange</h1></div>
-            <div style="flex: 1; text-align: center;"><div class="timer" id="timerDisplay" style="font-size:2.5em; display:inline-block;">00:00</div></div>
-            <div style="flex: 1; font-size: 1.5em; display: flex; align-items: center; justify-content: flex-end; gap: 15px;">
+            <div style="flex: 1; text-align: left;">
+                <h1 style="margin-bottom:0;">Smuggler Exchange</h1>
+            </div>
+            <div style="flex: 1; text-align: center;">
+                <div class="timer" id="timerDisplay" style="font-size:2.5em; display:inline-block;">00:00</div>
+            </div>
+            <div
+                style="flex: 1; font-size: 1.5em; display: flex; align-items: center; justify-content: flex-end; gap: 15px;">
                 <button id="btnReadyToggle" class="btn-ready" onclick="toggleReady()">Ready</button>
                 <div style="text-align: right;">
-                    <div>Round: <span id="lblRound" style="color:var(--primary-color);">?</span></div>
-                    <div>Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span></div>
+                    <div class="status-header">Round: <span id="lblRound" style="color:var(--primary-color);">?</span>
+                    </div>
+                    <div class="status-header">Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span>
+                    </div>
                 </div>
             </div>
         </div>
-        
-        <div class="panel flex-col h-full" style="padding: 10px 20px; flex: 1;">
-            <div class="grid grid-cols-2 flex-1">
+
+        <div class="panel flex-col h-full" style="padding: 10px 20px; flex: 1; min-height: 0;">
+            <div class="grid grid-cols-2 flex-1" style="min-height: 0;">
                 <div class="panel flex-col">
                     <h2>Exchange Control</h2>
 
@@ -51,11 +74,15 @@
 
                     <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
                         <!-- Smuggler Side -->
-                        <div class="panel flex-1" style="background: rgba(0,0,0,0.3); border: 1px solid var(--primary-color); box-shadow: inset 0 0 15px rgba(212,175,55,0.1); padding: 15px;">
-                            <h3 style="margin-top:0; color:var(--primary-color); text-align:center; font-size: 1.3em; letter-spacing: 1px;">SMUGGLER</h3>
-                            
+                        <div class="panel flex-1"
+                            style="background: var(--border-color); border: 2px solid var(--primary-color); padding: 15px;">
+                            <h3
+                                style="margin-top:0; color:var(--text-main); text-align:center; font-size: 1.3em; letter-spacing: 1px;">
+                                SMUGGLER</h3>
+
                             <label style="color:var(--text-muted); font-size:0.9em;">Acting Class:</label>
-                            <select id="selMyClass" style="margin-bottom:15px; margin-top:5px;" onchange="onMyClassChange()">
+                            <select id="selMyClass" style="margin-bottom:15px; margin-top:5px;"
+                                onchange="onMyClassChange()">
                                 <option value="">-- Select Class --</option>
                                 <option value="27">Class 27</option>
                                 <option value="28">Class 28</option>
@@ -71,16 +98,21 @@
                         </div>
 
                         <!-- Exchange Separator -->
-                        <div style="font-size: 1.2em; color: var(--text-muted); animation: pulse 2s infinite; text-shadow: 0 0 10px rgba(255,255,255,0.1); letter-spacing: 2px;">
+                        <div
+                            style="font-size: 1.2em; color: var(--text-muted); animation: pulse 2s infinite; text-shadow: 0 0 10px rgba(255,255,255,0.1); letter-spacing: 2px;">
                             TO
                         </div>
 
                         <!-- Target Side -->
-                        <div class="panel flex-1" style="background: rgba(0,0,0,0.3); border: 1px solid #440000; box-shadow: inset 0 0 15px rgba(68,0,0,0.4); padding: 15px;">
-                            <h3 style="margin-top:0; color:#fff; text-align:center; font-size: 1.3em; letter-spacing: 1px;">TARGET</h3>
-                            
+                        <div class="panel flex-1"
+                            style="background: var(--border-color); border: 2px solid var(--accent-red); padding: 15px;">
+                            <h3
+                                style="margin-top:0; color:var(--accent-red); text-align:center; font-size: 1.3em; letter-spacing: 1px;">
+                                TARGET</h3>
+
                             <label style="color:var(--text-muted); font-size:0.9em;">Victim Class:</label>
-                            <select id="selTargetClass" style="margin-bottom:15px; margin-top:5px;" onchange="updateCardOptions()">
+                            <select id="selTargetClass" style="margin-bottom:15px; margin-top:5px;"
+                                onchange="updateCardOptions()">
                                 <option value="">-- Select Target --</option>
                                 <option value="27">Class 27</option>
                                 <option value="28">Class 28</option>
@@ -97,20 +129,29 @@
                     </div>
 
                     <div style="display: flex; gap: 15px;">
-                        <button onclick="executeExchange()" style="flex: 2; padding: 15px; background: #440000; border: 1px solid #330000; color: #fff; font-size: 1.3em; font-weight: bold; border-radius: 8px; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 0 10px rgba(68,0,0,0.5);" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 0 20px rgba(68,0,0,0.8)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 0 10px rgba(68,0,0,0.5)';">Execute Exchange</button>
-                        <button onclick="executePass()" style="flex: 1; padding: 15px; background: #333; border: 1px solid #555; color: #aaa; font-size: 1.1em; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='#444';" onmouseout="this.style.background='#333';">Pass Turn</button>
+                        <button onclick="executeExchange()"
+                            style="flex: 2; padding: 15px; font-size: 1.3em; font-weight: bold; border-radius: 8px;">Execute
+                            Exchange</button>
+                        <button onclick="executeLock()"
+                            style="flex: 1; padding: 15px; font-size: 1.1em; border-radius: 8px;">Lock Card</button>
                     </div>
 
                 </div>
 
-                    <div class="panel flex-col">
-                        <h2>Pending Pool</h2>
-                        <div class="scrollable-panel flex-1">
-                            <table id="tblPending">
-                                <tr><th>Class</th><th>Card ID</th><th>Type</th><th>Contents</th><th>Status</th></tr>
-                            </table>
-                        </div>
+                <div class="panel flex-col flex-1" style="min-height: 0;">
+                    <h2 style="margin-top:0;">Pending Pool</h2>
+                    <div class="scrollable-panel flex-1">
+                        <table id="tblPending">
+                            <tr>
+                                <th>Class</th>
+                                <th>Card ID</th>
+                                <th>Type</th>
+                                <th>Contents</th>
+                                <th>Status</th>
+                            </tr>
+                        </table>
                     </div>
+                </div>
             </div>
         </div>
     </div>
@@ -119,15 +160,15 @@
     <script>
         let currentCards = [];
         let alertShown = false;
-        const phaseNames = {1:'Plan', 2:'Mission', 3:'Return', 4:'Restoration', 5:'Submission'};
+        const phaseNames = { 1: 'Plan', 2: 'Mission', 3: 'Return', 4: 'Restoration', 5: 'Submission' };
 
         // Timer Logic
         socket.on('timer:tick', (data) => {
             const min = Math.floor(data.remaining / 60);
             const sec = data.remaining % 60;
             const display = document.getElementById('timerDisplay');
-            if(display) {
-                display.innerText = `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+            if (display) {
+                display.innerText = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
                 if (data.remaining === 0 && !data.running) display.classList.add('blinking');
                 else display.classList.remove('blinking');
             }
@@ -141,16 +182,16 @@
         window.boneMap = {};
         socket.on('boneMap:data', (map) => {
             window.boneMap = map;
-            if(window.gameState) onStateUpdate(window.gameState); // Re-render if state already loaded
+            if (window.gameState) onStateUpdate(window.gameState); // Re-render if state already loaded
         });
 
         function getCardContentsHTML(cardId, type) {
             if (type !== 'BONE' || !window.boneMap[cardId]) return '-';
             const b = window.boneMap[cardId];
             return `<img src="resources/skull.png" style="height:1.2em; vertical-align:middle;"> ${b.skull} &nbsp; ` +
-                   `<img src="resources/torso.png" style="height:1.2em; vertical-align:middle;"> ${b.torso} &nbsp; ` +
-                   `<img src="resources/leg.png" style="height:1.2em; vertical-align:middle;"> ${b.leg} &nbsp; ` +
-                   `<img src="resources/tail.png" style="height:1.2em; vertical-align:middle;"> ${b.tail}`;
+                `<img src="resources/torso.png" style="height:1.2em; vertical-align:middle;"> ${b.torso} &nbsp; ` +
+                `<img src="resources/leg.png" style="height:1.2em; vertical-align:middle;"> ${b.leg} &nbsp; ` +
+                `<img src="resources/tail.png" style="height:1.2em; vertical-align:middle;"> ${b.tail}`;
         }
 
         function getCardContentsText(cardId, type) {
@@ -160,32 +201,33 @@
         }
 
         function onStateUpdate(state) {
-            if(document.getElementById('lblRound')) document.getElementById('lblRound').innerText = state.current_round;
-            if(document.getElementById('lblPhase')) document.getElementById('lblPhase').innerText = `${state.current_phase} (${phaseNames[state.current_phase] || ''})`;
+            if (document.getElementById('lblRound')) document.getElementById('lblRound').innerText = state.current_round;
+            if (document.getElementById('lblPhase')) document.getElementById('lblPhase').innerText = `${state.current_phase} (${phaseNames[state.current_phase] || ''})`;
 
-            if(state.cards) {
+            if (state.cards) {
                 // PENDING and LOCKED cards
                 currentCards = state.cards.filter(c => c.round == state.current_round && (c.status === 'PENDING' || c.status === 'LOCKED'));
-                
+
                 const classGroups = { 27: [], 28: [], 29: [], 30: [], 31: [] };
-                let sortedCards=currentCards.sort((a,b)=>{if(a.type!==b.type) return a.type.localeCompare(b.type);return a.card_id.localeCompare(b.card_id);});sortedCards.forEach(c => {
+                let sortedCards = sortCards([...currentCards]); sortedCards.forEach(c => {
                     if (classGroups[c.owner_class_id]) classGroups[c.owner_class_id].push(c);
                 });
 
-                let html = '<tr><th>Class</th><th>Card ID</th><th>Type</th><th>Contents</th><th>Status</th></tr>';
-                Object.keys(classGroups).sort().forEach(clsId => {
+                let html = '<colgroup><col style="width: 15%;"><col style="width: 15%;"><col style="width: 15%;"><col style="width: 15%;"><col style="width: 40%;"></colgroup><tr><th>Class</th><th>Card ID</th><th>Type</th><th>Status</th><th>Contents</th></tr>';
+                Object.keys(classGroups).sort((a, b) => parseInt(a) - parseInt(b)).forEach(clsId => {
                     const cards = classGroups[clsId];
                     if (cards.length === 0) {
-                        html += `<tr><td style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td></tr>`;
+                        html += `<tr class="class-divider"><td style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td></tr>`;
                     } else {
                         cards.forEach((card, idx) => {
-                            html += `<tr>
-                                ${idx === 0 ? `<td rowspan="${cards.length}" style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td>` : ''}
-                                <td style="font-weight:bold;">${card.card_id}</td>
-                                <td>${card.type}</td>
-                                <td>${getCardContentsHTML(card.card_id, card.type)}</td>
-                                <td>${card.status}</td>
-                            </tr>`;
+                            const trClass = (idx === cards.length - 1) ? ' class="class-divider"' : '';
+                            html += `<tr${trClass}>
+                                ${idx === 0 ? `<td rowspan="${cards.length}" style="vertical-align:middle; font-weight:bold; border-bottom: 2px solid var(--primary-color);">Class ${clsId}</td>` : ''}
+                                  <td style="font-weight:bold;">${card.card_id}</td>
+                                  <td>${card.type}</td>
+                                  <td>${(card.status === 'PENDING' && card.is_locked === 1) ? 'LOCKED' : card.status}</td>
+                                  <td>${getCardContentsHTML(card.card_id, card.type)}</td>
+                              </tr>`;
                         });
                     }
                 });
@@ -217,9 +259,10 @@
             targetCardSel.innerHTML = '<option value="">-- Select Target Card --</option>';
 
             // Populate my cards
-            if(myClass) {
-                const myAvailable = currentCards.filter(c => c.owner_class_id == myClass && c.status === 'PENDING');
-                if(myAvailable.length === 0 && !alertShown) {
+            if (myClass) {
+                let myAvailable = currentCards.filter(c => c.owner_class_id == myClass && c.status === 'PENDING' && c.is_locked !== 1);
+                myAvailable = sortCards(myAvailable);
+                if (myAvailable.length === 0 && !alertShown) {
                     // Show alert banner
                     alertShown = true;
                     const banner = document.getElementById('warningBanner');
@@ -233,8 +276,9 @@
             }
 
             // Populate target cards
-            if(targetClass) {
-                const targetAvailable = currentCards.filter(c => c.owner_class_id == targetClass && c.status === 'PENDING');
+            if (targetClass) {
+                let targetAvailable = currentCards.filter(c => c.owner_class_id == targetClass && c.status === 'PENDING' && c.is_locked !== 1);
+                targetAvailable = sortCards(targetAvailable);
                 targetAvailable.forEach(c => {
                     const contents = getCardContentsText(c.card_id, c.type);
                     targetCardSel.innerHTML += `<option value="${c.card_id}">${c.card_id} (${c.type}) ${contents !== '-' ? contents : ''}</option>`;
@@ -251,24 +295,24 @@
             const targetClass = document.getElementById('selTargetClass').value;
             const targetCard = document.getElementById('selTargetCard').value;
 
-            if(!myClass || !myCard || !targetClass || !targetCard) {
+            if (!myClass || !myCard || !targetClass || !targetCard) {
                 alert("Please select all fields for exchange.");
                 return;
             }
 
-            if(myClass === targetClass) {
+            if (myClass === targetClass) {
                 alert("Cannot exchange with yourself.");
                 return;
             }
 
-            if(confirm(`Confirm Exchange: Class ${myClass} gives [${myCard}] and steals [${targetCard}] from Class ${targetClass}?`)) {
+            if (confirm(`Confirm Exchange: Class ${myClass} gives [${myCard}] and steals [${targetCard}] from Class ${targetClass}?`)) {
                 socket.emit('clientD:exchangeCards', {
                     my_class_id: myClass,
                     my_card_id: myCard,
                     target_class_id: targetClass,
                     target_card_id: targetCard
                 });
-                
+
                 // Clear selections
                 document.getElementById('selMyClass').value = '';
                 document.getElementById('selTargetClass').value = '';
@@ -278,15 +322,24 @@
             }
         }
 
-        function executePass() {
+        function executeLock() {
             const myClass = document.getElementById('selMyClass').value;
-            if(!myClass) {
+            const myCard = document.getElementById('selMyCard').value;
+            if (!myClass) {
                 alert("Select acting class first.");
                 return;
             }
-            if(confirm(`Class ${myClass} passes their turn?`)) {
-                alert(`Class ${myClass} passed.`);
+            if (!myCard) {
+                alert("Select a card to lock.");
+                return;
+            }
+            if (confirm(`Class ${myClass} locks Card ${myCard} for this round?`)) {
+                socket.emit('clientD:lockCard', {
+                    my_class_id: myClass,
+                    my_card_id: myCard
+                });
                 document.getElementById('selMyClass').value = '';
+                document.getElementById('selMyCard').value = '';
                 alertShown = false;
                 document.getElementById('warningBanner').classList.remove('visible');
                 updateCardOptions();
@@ -298,10 +351,10 @@
         window.currentReadyStatus = {};
         function updateReadyUI() {
             const btn = document.getElementById('btnReadyToggle');
-            if(!btn) return;
-            if(window.currentReadyStatus[myRoleId] !== undefined) {
+            if (!btn) return;
+            if (window.currentReadyStatus[myRoleId] !== undefined) {
                 const isReady = window.currentReadyStatus[myRoleId];
-                if(isReady) {
+                if (isReady) {
                     btn.classList.add('ready-ok');
                     btn.innerText = 'Ready OK';
                 } else {
@@ -326,4 +379,5 @@
         });
     </script>
 </body>
+
 </html>

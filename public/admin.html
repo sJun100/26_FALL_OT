@@ -9,9 +9,9 @@
         .submission-row { padding: 8px; border-bottom: 1px solid rgba(212,175,55,0.3); }
         .submission-row.approved { opacity: 0.5; }
         .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.8em; }
-        .status-badge.waiting { background: #333333; color: var(--text-main); border: 1px solid #555; }
-        .status-badge.done { background: #440000; color: #ffffff; border: 1px solid #ff4444; }
-        .status-badge.missing { background: #111111; color: var(--text-muted); border: 1px solid #333; }
+        .status-badge.waiting { background: var(--bg-overlay); color: var(--text-main); border: 1px solid var(--border-color); }
+        .status-badge.done { background: var(--accent-red); color: #ffffff; border: 1px solid var(--accent-red); }
+        .status-badge.missing { background: rgba(0,0,0,0.05); color: var(--text-muted); border: 1px dashed var(--border-color); }
     </style>
 </head>
 <body>
@@ -20,8 +20,8 @@
             <div style="flex: 1; text-align: left;"><h1 style="margin-bottom:0;">Admin Console</h1></div>
             <div style="flex: 1; text-align: center;"><div class="timer" id="timerDisplay" style="font-size:2.5em; display:inline-block;">00:00</div></div>
             <div style="flex: 1; font-size: 1.5em; text-align: right;">
-                <div>Round: <span id="lblRound" style="color:var(--primary-color);">?</span></div>
-                <div>Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span></div>
+                <div class="status-header">Round: <span id="lblRound" style="color:var(--primary-color);">?</span></div>
+                <div class="status-header">Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span></div>
             </div>
         </div>
 
@@ -56,7 +56,7 @@
                         <input type="number" id="timerMinutes" value="3" min="1" max="30" style="width:60px; padding:5px; font-size:1em;">
                         <span style="color:var(--text-muted);">m</span>
                         <button onclick="startTimer()" style="margin-left:5px; padding: 5px 10px;">Start</button>
-                        <button onclick="stopTimer()" style="margin-left:5px; padding: 5px 10px; background:#440000;">Stop</button>
+                        <button onclick="stopTimer()" style="margin-left:5px; padding: 5px 10px; background:var(--accent-red);">Stop</button>
                     </div>
                 </div>
 
@@ -84,7 +84,7 @@
                         <button onclick="window.open('/api/export','_blank')" style="font-size: 0.9em;">Export Log</button>
                     </div>
                     <div class="panel" style="text-align:center;">
-                        <button onclick="resetDB()" style="background:#440000; font-size: 0.9em;">Full Reset</button>
+                        <button onclick="resetDB()" style="background:var(--accent-red); font-size: 0.9em;">Full Reset</button>
                     </div>
                 </div>
             </div>
@@ -94,7 +94,7 @@
                 <h2>All Classes Inventory</h2>
                 <div class="scrollable-panel flex-1">
                     <table id="tblClasses">
-                        <tr><th>Class</th><th><img src="resources/skull.png" style="height:1.2em; vertical-align:middle;"> Skull</th><th><img src="resources/torso.png" style="height:1.2em; vertical-align:middle;"> Torso</th><th><img src="resources/leg.png" style="height:1.2em; vertical-align:middle;"> Leg</th><th><img src="resources/tail.png" style="height:1.2em; vertical-align:middle;"> Tail</th><th>Total</th></tr>
+                        <tr><th>Class</th><th>Skull</th><th>Torso</th><th>Leg</th><th>Tail</th><th>Total</th></tr>
                     </table>
                 </div>
             </div>
@@ -107,7 +107,7 @@
                     <div id="submissionList" class="scrollable-panel flex-1"></div>
                     <div style="margin-top:10px; display:flex; gap:10px;">
                         <button id="btnReveal" onclick="revealResults()" style="flex:1; padding:8px;" disabled>Reveal Ranks</button>
-                        <button onclick="hideResults()" style="flex:1; padding:8px; background:#440000;">Hide Ranks</button>
+                        <button onclick="hideResults()" style="flex:1; padding:8px; background:var(--accent-red);">Hide Ranks</button>
                     </div>
                 </div>
 
@@ -116,7 +116,7 @@
                     <div style="display:flex; gap:5px;">
                         <input type="text" id="txtAlert" placeholder="Type alert..." style="flex:1; font-size:1em; padding:5px;">
                         <button onclick="sendAlert()" style="padding: 5px 10px;">Send</button>
-                        <button onclick="closeAlert()" style="padding: 5px 10px; background:#440000;">Close</button>
+                        <button onclick="closeAlert()" style="padding: 5px 10px; background:var(--accent-red);">Close</button>
                     </div>
                 </div>
             </div>
@@ -141,7 +141,7 @@
 
             // Classes table
             if (state.classes) {
-                let html = '<tr><th>Class</th><th><img src="resources/skull.png" style="height:1.2em; vertical-align:middle;"> Skull</th><th><img src="resources/torso.png" style="height:1.2em; vertical-align:middle;"> Torso</th><th><img src="resources/leg.png" style="height:1.2em; vertical-align:middle;"> Leg</th><th><img src="resources/tail.png" style="height:1.2em; vertical-align:middle;"> Tail</th><th>Total</th></tr>';
+                let html = '<tr><th>Class</th><th>Skull</th><th>Torso</th><th>Leg</th><th>Tail</th><th>Total</th></tr>';
                 state.classes.forEach(c => {
                     const total = c.skull_count + c.torso_count + c.leg_count + c.tail_count;
                     html += `<tr><td>${c.class_id}</td><td>${c.skull_count}</td><td>${c.torso_count}</td><td>${c.leg_count}</td><td>${c.tail_count}</td><td>${total}</td></tr>`;
@@ -175,10 +175,10 @@
                                 <div>
                                     <strong>Class ${cid}</strong> 
                                     <span class="status-badge ${statusClass}">${statusText}</span><br>
-                                    <span style="font-size:0.9em; color:#ccc;">H:${sub.skull_sub} B:${sub.torso_sub} L:${sub.leg_sub} T:${sub.tail_sub} | Error: ${sub.error_rate}%</span>
+                                    <span style="font-size:0.9em; color:var(--text-main);">H:${sub.skull_sub} B:${sub.torso_sub} L:${sub.leg_sub} T:${sub.tail_sub} | Error: ${sub.error_rate}%</span>
                                 </div>
                                 <div style="flex-shrink: 0;">
-                                    ${!sub.is_locked ? `<button onclick="lockSubmission(${cid})" style="padding: 4px 12px; font-size: 0.9em; background:var(--primary-color); color:#000; min-width: 75px; white-space: nowrap;">Lock</button>` : `<button onclick="unlockSubmission(${cid})" style="padding: 4px 12px; font-size: 0.9em; background:#666; color:#fff; min-width: 75px; white-space: nowrap;">Unlock</button>`}
+                                    ${!sub.is_locked ? `<button onclick="lockSubmission(${cid})" style="padding: 4px 12px; font-size: 0.9em;  color:var(--text-main); min-width: 75px; white-space: nowrap;">Lock</button>` : `<button onclick="unlockSubmission(${cid})" style="padding: 4px 12px; font-size: 0.9em; background:var(--text-muted); color:var(--text-main); min-width: 75px; white-space: nowrap;">Unlock</button>`}
                                 </div>
                             </div>
                         </div>`;
@@ -293,11 +293,12 @@
                     div.innerText = `${k} OK`;
                     div.style.borderColor = '#ffffff';
                     div.style.boxShadow = '0 0 8px rgba(255, 255, 255, 0.4)';
-                } else {
-                    div.style.background = 'linear-gradient(145deg, #2a2a2a, #1a1a1a)';
-                    div.style.color = 'var(--text-muted)';
-                    div.innerText = `${k} Wait`;
-                }
+                    } else {
+                        div.style.background = 'rgba(0,0,0,0.05)';
+                        div.style.border = '1px dashed var(--border-color)';
+                        div.style.color = 'var(--text-main)';
+                        div.innerText = `${k} Wait`;
+                    }
                 pnl.appendChild(div);
             });
         });

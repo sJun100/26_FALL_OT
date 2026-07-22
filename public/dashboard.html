@@ -48,8 +48,8 @@
                 <div id="alertBanner" class="alert-banner" style="display:none; position: absolute; left: 0; top: 50%; transform: translateY(-50%); z-index: 100;"></div>
                 <button id="btnReadyToggle" class="btn-ready" onclick="toggleReady()">Ready</button>
                 <div style="text-align: right; font-family: 'Montserrat', sans-serif; font-weight: 600; line-height: 1.2;">
-                    <div>Round: <span id="lblRound" style="color:var(--primary-color);">?</span></div>
-                    <div>Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span></div>
+                    <div class="status-header">Round: <span id="lblRound" style="color:var(--primary-color);">?</span></div>
+                    <div class="status-header">Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span></div>
                 </div>
             </div>
         </div>
@@ -80,8 +80,8 @@
             <div class="panel flex-1 flex-col" style="padding: 10px;">
                 <h2 style="font-size: 1.1em;">Unlocked Hints</h2>
                 <div id="hintsList" class="scrollable-panel flex-1" style="font-size: 1em;"></div>
-                <div id="pnlSubmitFossil" class="hidden" style="margin-top:10px; border-top:1px solid #444; padding-top:10px; flex-shrink: 0;">
-                    <h2 style="font-size: 1.1em; color:#ffd700; margin-bottom:10px;">Submit Fossil Restoration</h2>
+                <div id="pnlSubmitFossil" class="hidden" style="margin-top:10px; border-top:1px solid var(--border-color); padding-top:10px; flex-shrink: 0;">
+                    <h2 style="font-size: 1.1em; color:var(--primary-color); margin-bottom:10px;">Submit Fossil Restoration</h2>
                     <div style="display:flex; justify-content:space-between; margin-bottom:10px; gap:10px;">
                         <div style="flex:1; text-align:center;">
                             <img src="resources/skull.png" style="height:1.2em; vertical-align:middle; margin-right:5px;"> Skull<br>
@@ -101,7 +101,7 @@
                         </div>
                     </div>
                     <button id="btnSubmitFossil" onclick="submitFossil()" style="width:100%;">Submit Fossil Restoration</button>
-                    <div id="lblLockStatus" style="color: #ffaa00; text-align: center; margin-top: 10px; display: none; font-weight: bold;"></div>
+                    <div id="lblLockStatus" style="color: var(--accent-red); text-align: center; margin-top: 10px; display: none; font-weight: bold;"></div>
                 </div>
             </div>
             
@@ -208,10 +208,7 @@
                 let hintsHtml = '';
                 
                 const classGroups = { 27: [], 28: [], 29: [], 30: [], 31: [] };
-                let sortedCards = state.cards.sort((a,b) => {
-                    if(a.type !== b.type) return a.type.localeCompare(b.type);
-                    return a.card_id.localeCompare(b.card_id);
-                });
+                let sortedCards = sortCards([...state.cards]);
                 sortedCards.forEach(c => {
                     if (c.round == state.current_round) {
                         if (classGroups[c.owner_class_id]) classGroups[c.owner_class_id].push(c);
@@ -222,23 +219,24 @@
                             ? window.classHints[c.card_id] : `Unknown Hint: ${c.card_id}`;
                         const formattedHint = hintText.replace(/\b(skull|torso|leg|tail)\b/gi, match => {
                             const word = match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
-                            return `<strong style="color:#ffd700">${word}</strong>`;
+                            return `<strong>${word}</strong>`;
                         });
-                        hintsHtml += `<div class="hint-text"><span style="color:var(--primary-color); margin-right:8px; font-weight:bold;">•</span><div>${formattedHint}</div></div>`;
+                        hintsHtml += `<div class="hint-text"><span style="color:var(--primary-color); margin-right:8px; font-weight:bold;">💡</span><div>${formattedHint}</div></div>`;
                     }
                 });
 
                 Object.keys(classGroups).sort((a,b) => parseInt(a) - parseInt(b)).forEach(clsId => {
                     const cards = classGroups[clsId];
                     if (cards.length === 0) {
-                        html += `<tr><td style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td></tr>`;
+                        html += `<tr class="class-divider"><td style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td></tr>`;
                     } else {
                         cards.forEach((card, idx) => {
-                            html += `<tr>
-                                ${idx === 0 ? `<td rowspan="${cards.length}" style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td>` : ''}
+                            const trClass = (idx === cards.length - 1) ? ' class="class-divider"' : '';
+                            html += `<tr${trClass}>
+                                ${idx === 0 ? `<td rowspan="${cards.length}" style="vertical-align:middle; font-weight:bold; border-bottom: 2px solid var(--primary-color);">Class ${clsId}</td>` : ''}
                                 <td style="font-weight:bold;">${card.card_id}</td>
                                 <td>${card.type}</td>
-                                <td>${card.status}</td>
+                                <td>${(card.status === 'PENDING' && card.is_locked === 1) ? 'LOCKED' : card.status}</td>
                             </tr>`;
                         });
                     }
@@ -369,11 +367,6 @@
             }, 800);
         });
 
-        function onPhaseSync(phase) {
-            if (phase == 4) { spawnParticles(); }
-        }
-        window.onPhaseSync = onPhaseSync;
-
         // ── Ready System (C-06) ──
         window.currentReadyStatus = {};
         function updateReadyUI() {
@@ -405,25 +398,6 @@
             window.currentReadyStatus = status;
             updateReadyUI();
         });
-
-        function spawnParticles() {
-            const shapes = ['✨', '⭐', '🌟', '✦'];
-            const container = document.querySelector('.overlay');
-            for (let i = 0; i < 40; i++) {
-                setTimeout(() => {
-                    const p = document.createElement('div');
-                    p.className = 'particle';
-                    p.textContent = shapes[Math.floor(Math.random() * shapes.length)];
-                    p.style.left = Math.random() * 80 + 10 + '%';
-                    p.style.top = Math.random() * 40 + 20 + '%';
-                    p.style.setProperty('--tx', (Math.random() - 0.5) * 400 + 'px');
-                    p.style.setProperty('--ty', (Math.random() - 1.0) * 300 + 'px');
-                    p.style.fontSize = Math.random() * 25 + 20 + 'px';
-                    container.appendChild(p);
-                    setTimeout(() => p.remove(), 1200);
-                }, i * 50);
-            }
-        }
 
 
         function submitFossil() {

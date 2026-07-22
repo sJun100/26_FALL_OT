@@ -21,17 +21,17 @@
             <div style="flex: 1; font-size: 1.5em; display: flex; align-items: center; justify-content: flex-end; gap: 15px;">
                 <button id="btnReadyToggle" class="btn-ready" onclick="toggleReady()">Ready</button>
                 <div style="text-align: right;">
-                    <div>Round: <span id="lblRound" style="color:var(--primary-color);">?</span></div>
-                    <div>Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span></div>
+                    <div class="status-header">Round: <span id="lblRound" style="color:var(--primary-color);">?</span></div>
+                    <div class="status-header">Phase: <span id="lblPhase" style="color:var(--primary-color);">?</span></div>
                 </div>
             </div>
         </div>
         
-        <div class="panel flex-col h-full" style="padding: 10px 20px; flex: 1;">
+        <div class="panel flex-col h-full" style="padding: 10px 20px; flex: 1; min-height: 0;">
 
 
 
-            <div class="grid grid-cols-2 flex-1" style="gap: 15px;">
+            <div class="grid grid-cols-2 flex-1" style="gap: 15px; min-height: 0;">
                 <div class="panel flex-col" style="padding: 10px; margin: 0;">
                     <h3 style="margin-top:0;">Draft Assignments</h3>
                     <div id="draftArea" class="flex-1" style="display:flex; flex-direction:column; gap:5px; overflow-y:auto;"></div>

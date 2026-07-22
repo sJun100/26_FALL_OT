@@ -94,7 +94,8 @@ db.serialize(() => {
         round INTEGER,
         type TEXT,
         owner_class_id INTEGER,
-        status TEXT
+        status TEXT,
+        is_locked INTEGER DEFAULT 0
     )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS restoration_history (
@@ -314,10 +315,15 @@ io.on('connection', (socket) => {
         io.emit('ready:update', readyStatus);
 
         db.run(`UPDATE game_state SET value = ? WHERE key = 'current_round'`, [round.toString()], () => {
-            // Also reset phase to 1 when changing round
+            // Reset phase to 1 when changing round
             db.run(`UPDATE game_state SET value = '1' WHERE key = 'current_phase'`, () => {
-                startServerTimer(3); // Auto start 3 min timer for Phase 1
-                getFullState(state => io.emit('state:update', state));
+                db.run(`UPDATE cards_registry SET is_locked = 0`, () => {
+                    startServerTimer(3); // Auto start 3 min timer for Phase 1
+                    getFullState(state => {
+                        io.emit('state:update', state);
+                        io.emit('phase:sync', 1);
+                    });
+                });
             });
         });
     });
@@ -559,7 +565,23 @@ io.on('connection', (socket) => {
         });
     });
 
-    // ══════════════════════════════════════════
+    socket.on('clientD:lockCard', (data) => {
+        const { my_class_id, my_card_id } = data;
+        db.serialize(() => {
+            // Ensure only 1 lock per class by unlocking any previously locked card
+            db.run(`UPDATE cards_registry SET is_locked = 0 WHERE owner_class_id = ? AND is_locked = 1`, [parseInt(my_class_id)]);
+            // Lock the new card
+            db.run(`UPDATE cards_registry SET is_locked = 1 WHERE card_id = ? AND owner_class_id = ?`,
+                [my_card_id, parseInt(my_class_id)],
+                () => {
+                    logEvent('Smuggler', `Class ${my_class_id} locked Card ${my_card_id}`);
+                    getFullState(state => io.emit('state:update', state));
+                }
+            );
+        });
+    });
+
+    // ════════════════════════════════════════════════════════════════════
     // Client B (Excavator) Events
     // FIX for C-04: use parsed CSV data with round-awareness
     // ══════════════════════════════════════════
