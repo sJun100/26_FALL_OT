@@ -308,10 +308,15 @@ th {
 
 /* Hint Card Text */
 .hint-text {
-    font-size: 1.25em;
-    margin-bottom: 10px;
+    font-size: 1.05em;
+    margin-bottom: 8px;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
+    line-height: 1.4;
+}
+.hint-text > span {
+    line-height: 1;
+    flex-shrink: 0;
 }
 
 /* Result Reveal Cards */
@@ -321,13 +326,16 @@ th {
     border-radius: 12px;
     padding: 20px 30px;
     margin: 10px 0;
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     align-items: center;
     font-size: 1.5em;
     opacity: 0;
     transform: translateY(20px);
     transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.result-card > span:last-child {
+    text-align: left;
 }
 .result-card.visible { opacity: 1; transform: translateY(0); }
 .result-card.winner {

@@ -161,7 +161,7 @@
                 
                 const btnReveal = document.getElementById('btnReveal');
                 if (btnReveal) {
-                    btnReveal.disabled = (approvedCount < 5);
+                    btnReveal.disabled = (submitted.length === 0);
                 }
 
                 let html = '';

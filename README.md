@@ -1,388 +1,492 @@
-# 공룡 화석 발굴단 통합 웹 시스템
+# 공룡 화석 발굴단 — 웹 운영 시스템 룰북
 
-후기 새내기새로배움터 게임 "공룡 화석 발굴단"의 전체 진행을 실시간으로 관리하는 웹 시스템이다.
-게임 그 자체가 아니라, 오프라인에서 진행되는 게임의 상태(뼈 보유량, 카드 교환, 오차율 산출 등)를 추적하고 빔프로젝터를 통해 학생들에게 보여주기 위한 운영 도구이다.
+> 후기 새내기새로배움터 게임 **"공룡 화석 발굴단"** 의 전체 진행을 실시간으로 관리하는 웹 시스템  
+> 오프라인 게임의 상태(뼈 보유량, 카드 교환, 오차율 산출 등)를 추적하고, 빔프로젝터로 학생들에게 보여주는 운영 도구
 
 ---
 
-## 1. 프로젝트 개요
+## 1. 게임 개요
 
-### 1.1. 게임 구조 요약
+### 1.1. 구조
 
-- 27반~31반까지 총 5개 반이 참여한다.
-- 각 반의 학생 약 20명을 A, B, C, D 4개 조로 나누어 라운드마다 역할을 로테이션한다.
-- 역할: 고고학자(강의실), 발굴가(미니게임), 대학원생(보물찾기), 밀거래상(강제 교환)
-- 총 6라운드를 진행하며, 매 라운드는 5개의 페이즈로 구성된다.
-- 최종 6라운드 제출 화석의 오차율이 가장 낮은 반이 우승한다.
+- **참가**: 27반 ~ 31반, 총 5개 반
+- **조 편성**: 각 반의 학생 약 20명을 A, B, C, D 4개 조로 분류
+- **라운드**: 총 6라운드. 각 라운드는 5개 페이즈로 구성
+- **승리 조건**: 6라운드 종료 후 화석 복원 오차율이 가장 낮은 반이 우승
 
-### 1.2. 기술 스택
+### 1.2. 역할 로테이션표
+
+| 라운드 | A조 | B조 | C조 | D조 |
+|--------|-----|-----|-----|-----|
+| 1, 2, 6 | 고고학자 (Archaeologist) | 발굴가 (Excavator) | 대학원생 (Researcher) | 밀거래상 (Smuggler) |
+| 3 | 발굴가 | 대학원생 | 밀거래상 | 고고학자 |
+| 4 | 대학원생 | 밀거래상 | 고고학자 | 발굴가 |
+| 5 | 밀거래상 | 고고학자 | 대학원생 | 발굴가 |
+
+### 1.3. 라운드 페이즈
+
+| 페이즈 | 이름 | 설명 |
+|--------|------|------|
+| 1 | Plan | 고고학자가 조를 이끌어 이번 라운드 전략 수립 |
+| 2 | Mission | 각 역할이 해당 방으로 이동하여 미션 수행 |
+| 3 | Return | 방에서 돌아와 결과 공유 |
+| 4 | Restoration | 카드 보상이 지급됨 (서버가 자동 처리) |
+| 5 | Submission | 화석 복원 제출 (오차율 산출) |
+
+---
+
+## 2. 기술 스택
 
 | 구성 요소 | 기술 |
 |-----------|------|
 | 백엔드 서버 | Node.js + Express |
 | 실시간 통신 | Socket.io (WebSocket) |
-| 데이터 저장 | SQLite3 (파일 기반 DB) |
-| 프론트엔드 | Vanilla HTML/CSS/JS |
-| 디자인 테마 | 버건디 & 흑백 다크 모드 (이모티콘 배제, PNG 에셋 활용) |
-
-### 1.3. 클라이언트 구성
-
-| 클라이언트 | 파일 | 용도 | 접속자 |
-|------------|------|------|--------|
-| Client X | admin.html | 전체 게임 제어 (마스터 콘솔) | 운영진 1명 |
-| Client A | dashboard.html | 반별 대시보드 (빔프로젝터 화면) | 각 반 디렉터 (5명) |
-| Client B | excavator.html | 발굴가 미니게임 보상 배분 | 발굴가 방 디렉터 |
-| Client C | researcher.html | 보물찾기 카드 등록 | 대학원생 방 디렉터 |
-| Client D | smuggler.html | 밀거래상 강제 교환 | 밀거래상 방 디렉터 |
+| 데이터 저장 | SQLite3 (파일 기반 DB, 자동 생성) |
+| 프론트엔드 | Vanilla HTML / CSS / JS |
+| 디자인 테마 | 버건디 & 흑백 다크 모드 (이모지 배제, PNG 에셋 사용) |
 
 ---
 
-## 2. 디렉토리 구조
+## 3. 디렉토리 구조
 
 ```
 dinosaur_fossil_expedition/
-├── server.js                     서버 진입점. Express 라우팅, Socket.io 이벤트, SQLite 연동
-├── package.json                  Node.js 패키지 설정
-├── database.db                   SQLite DB 파일 (서버 최초 실행 시 자동 생성)
+├── server.js                     서버 진입점 (Express + Socket.io + SQLite)
+├── package.json
+├── database.db                   SQLite DB (첫 실행 시 자동 생성)
 │
-├── data/                         게임 설정 데이터 (JSON)
-│   ├── answers.json              반별 정답 뼈 조합 (H, B, L, T). 절대 변경 불가 원칙
-│   └── hints.json                힌트 카드 ID별 영문 텍스트 매핑. HTML 태그 사용 가능
+├── data/
+│   ├── answers.json              반별 정답 뼈 조합 { "27": {H, B, L, T}, ... }
+│   ├── hints.json                힌트 카드 ID → 텍스트 매핑
+│   ├── treasure_bone_cards.csv   뼈 카드 ID → 뼈 종류별 수량
+│   └── excavator_rewards.csv     라운드별 포대(Sack) → 뼈 종류별 보상 수량
 │
-├── resources/                    원본 기획 자료 (코드에서 직접 참조하지 않음)
-│   ├── excavator_rewards.csv     라운드별 뼈 포대(Sack) 보상 수량표
-│   ├── treasure_bone_cards.csv   라운드별 뼈조각 카드의 뼈 구성표
-│   ├── hints_example.csv         힌트 카드 텍스트 예시 (한국어)
-│   └── 룰북 초안 2차.pdf         게임 규칙서 원본
-│
-└── public/                       프론트엔드 정적 파일
+└── public/
     ├── index.html                역할 선택 허브 페이지
-    ├── admin.html                Client X (마스터 콘솔)
-    ├── dashboard.html            Client A (반별 대시보드)
-    ├── excavator.html            Client B (발굴가 드래프트)
-    ├── researcher.html           Client C (보물찾기 스캐너)
-    ├── smuggler.html             Client D (밀거래상 교환)
+    ├── admin.html                Client X — 마스터 콘솔 (운영진 전용)
+    ├── dashboard.html            Client A — 반별 대시보드 (빔프로젝터 화면)
+    ├── excavator.html            Client B — 발굴가 드래프트
+    ├── researcher.html           Client C — 대학원생 카드 스캐너
+    ├── smuggler.html             Client D — 밀거래상 교환 패널
     ├── css/
-    │   └── theme.css             전체 UI 테마 스타일시트 (버건디 및 흑백 톤)
-    ├── img/                      (사용 안함, 리소스는 resources/ 사용)
-    ├── resources/                클라이언트 UI에 사용되는 뼈 이미지 파일 (skull.png 등)
-    └── js/
-        └── socket-client.js      소켓 통신 공통 모듈
+    │   └── theme.css             전체 UI 테마 (버건디 & 흑백 다크 모드)
+    ├── js/
+    │   └── socket-client.js      소켓 공통 모듈 (state 수신, 라운드 전환 애니메이션)
+    └── resources/
+        ├── skull.png / torso.png / leg.png / tail.png   뼈 아이콘 이미지
+        └── ...
 ```
 
 ---
 
-## 3. 데이터베이스 스키마
+## 4. 서버 실행
 
-서버가 처음 실행되면 database.db 파일이 자동 생성되고, 아래 테이블 4개가 초기화된다.
+```bash
+npm install
+node server.js
+# → http://localhost:3000 에서 접속
+```
 
-### 3.1. classes (반 상태)
+- **역할 선택 허브**: `http://localhost:3000/`
+- **Admin**: `http://localhost:3000/admin.html`
+- **반별 대시보드**: `http://localhost:3000/dashboard.html?class_id=27` (27~31)
+- **발굴가**: `http://localhost:3000/excavator.html`
+- **대학원생**: `http://localhost:3000/researcher.html`
+- **밀거래상**: `http://localhost:3000/smuggler.html`
 
-각 반의 실시간 뼈 보유량을 저장한다. 라운드를 거듭하며 누적된다.
+---
+
+## 5. 데이터베이스 스키마
+
+### classes (반 뼈 보유량)
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
-| class_id | INTEGER (PK) | 반 번호 (27, 28, 29, 30, 31) |
-| skull_count | INTEGER | 머리뼈 보유 수 (초기값 0) |
+| class_id | INTEGER (PK) | 반 번호 (27~31) |
+| skull_count | INTEGER | 머리뼈 보유 수 |
 | torso_count | INTEGER | 몸통뼈 보유 수 |
 | leg_count | INTEGER | 다리뼈 보유 수 |
 | tail_count | INTEGER | 꼬리뼈 보유 수 |
 
-### 3.2. game_state (게임 진행 상태)
+### game_state (게임 진행 상태)
 
-현재 라운드와 페이즈 번호를 키-값 쌍으로 저장한다.
+| key | value |
+|-----|-------|
+| current_round | 1 ~ 6 |
+| current_phase | 1 ~ 5 |
 
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| key | TEXT (PK) | "current_round" 또는 "current_phase" |
-| value | TEXT | 해당 값 (문자열) |
-
-### 3.3. cards_registry (카드 등록 및 교환 내역)
-
-보물찾기에서 발견된 카드의 소유권과 상태를 추적한다.
+### cards_registry (카드 등록 및 교환)
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
-| card_id | TEXT (PK) | 카드 고유 ID (예: "1-Bone A", "1-1") |
-| round | INTEGER | 등록된 라운드 번호 |
-| type | TEXT | "HINT" 또는 "BONE" |
-| owner_class_id | INTEGER | 현재 소유 반 번호 |
-| status | TEXT | "PENDING", "LOCKED", "RELEASED" |
+| card_id | TEXT (PK) | 카드 ID (예: `1-A`, `2-H3`) |
+| round | INTEGER | 등록된 라운드 |
+| type | TEXT | `BONE` 또는 `HINT` |
+| owner_class_id | INTEGER | 현재 소유 반 |
+| status | TEXT | `PENDING` → `LOCKED`(교환완료) → `RELEASED`(보상지급) |
+| is_locked | INTEGER | Smuggler가 교환 잠금 설정 시 1 |
 
-상태 전이: PENDING(등록 직후) -> LOCKED(교환 완료) -> RELEASED(Phase 4에서 일괄 지급)
-
-### 3.4. restoration_history (화석 복원 제출 이력)
-
-각 반이 매 라운드마다 제출한 화석 조합과 자동 계산된 오차율을 기록한다.
+### restoration_history (화석 복원 제출 이력)
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
-| id | INTEGER (PK, AI) | 자동 증가 인덱스 |
-| class_id | INTEGER | 제출 반 번호 |
+| id | INTEGER (PK) | 자동 증가 |
+| class_id | INTEGER | 제출 반 |
 | round | INTEGER | 제출 라운드 |
 | skull_sub | INTEGER | 제출한 머리뼈 수 |
 | torso_sub | INTEGER | 제출한 몸통뼈 수 |
 | leg_sub | INTEGER | 제출한 다리뼈 수 |
 | tail_sub | INTEGER | 제출한 꼬리뼈 수 |
-| error_rate | REAL | 오차율 (소수점 둘째 자리) |
-| is_approved | INTEGER | 운영진 승인 여부 (0: 대기, 1: 승인) |
+| error_rate | REAL | 오차율 (%) |
+| is_locked | INTEGER | Admin이 잠금 시 1 (잠금 후 수정 불가) |
 
 ---
 
-## 4. 실시간 통신 구조
-
-모든 클라이언트는 socket-client.js를 통해 서버와 WebSocket으로 연결된다.
-
-### 4.1. 공통 흐름
-
-1. 클라이언트가 브라우저에서 페이지를 열면 자동으로 소켓 연결이 수립된다.
-2. 연결 즉시 getState 이벤트를 발신하여 서버로부터 전체 게임 상태를 수신한다.
-3. 서버에서 어떤 변경이 발생하면 state:update 이벤트를 모든 클라이언트에 브로드캐스트한다.
-4. 각 클라이언트 페이지는 window.onStateUpdate 함수를 구현하여 수신된 상태로 화면을 갱신한다.
-
-### 4.2. 서버 -> 클라이언트 이벤트
-
-| 이벤트 | 설명 |
-|--------|------|
-| state:update | 전체 게임 상태(라운드, 페이즈, 반별 뼈, 카드 목록) 전송 |
-| sync:phase | 페이즈 강제 전환 알림 |
-| sync:card_exchanged | 밀거래 교환 성공 알림 |
-
-### 4.3. 클라이언트 -> 서버 이벤트
-
-| 이벤트 | 발신 클라이언트 | 설명 |
-|--------|----------------|------|
-| getState | 모든 클라이언트 | 접속 시 전체 상태 요청 |
-| admin:setPhase | Client X | 페이즈 번호 변경 |
-| admin:setRound | Client X | 라운드 번호 변경 |
-| admin:updateBones | Client X | 특정 반의 특정 뼈 수량 가감 |
-| admin:startTimer | Client X | 게임 진행 타이머 시작 |
-| admin:stopTimer | Client X | 게임 진행 타이머 정지 |
-| admin:revealResults | Client X | 오차율 기반 순위 순차적 공개 |
-| admin:hideResults | Client X | 오차율 순위 화면 숨김 |
-| admin:lockRestoration | Client X | 특정 반의 화석 제출 상태 확정(Lock) |
-| admin:unlockRestoration | Client X | 특정 반의 화석 제출 상태 잠금 해제 |
-| clientC:addCards | Client C | 보물찾기에서 발견한 카드 등록 |
-| clientC:deleteCard | Client C | 잘못 등록한 카드 삭제 (PENDING 상태만) |
-| clientD:exchangeCards | Client D | 밀거래 강제 교환 실행 |
-| clientB:submitDraft | Client B | 발굴가 포대 배분 결과 제출 |
-| clientA:submitRestoration | Client A | 화석 복원 뼈 조합 제출 (재제출 가능, Lock 이후 불가) |
+## 6. 클라이언트별 상세 사용법
 
 ---
 
-## 5. 핵심 게임 로직
+### 6.1. Client X — admin.html (마스터 콘솔)
 
-### 5.1. 오차율 계산
+**접속**: `http://localhost:3000/admin.html`  
+**사용자**: 게임 운영 총괄 1명
 
-각 반에는 data/answers.json에 고유한 정답 조합(H*, B*, L*, T*)이 고정되어 있다.
-스태프가 화석을 제출하면 서버가 자동으로 다음 공식을 적용한다:
+#### 화면 구성
 
-```
-절대 오차량 E = |H - H*| + |B - B*| + |L - L*| + |T - T*|
-오차율(%) = (E / N*) x 100    (N* = H* + B* + L* + T*, 약 140)
-```
+| 패널 | 기능 |
+|------|------|
+| Game Status | 현재 라운드/페이즈 표시 |
+| Round & Phase Control | 라운드/페이즈 변경 |
+| Timer | 타이머 설정 및 제어 |
+| Emergency Alert | 모든 클라이언트에 긴급 공지 전송 |
+| Bone Count Editor | 반별 뼈 수 수동 수정 |
+| Fossil Submissions | 각 반의 복원 제출 현황 및 잠금/해제 |
+| Ready Status | 각 클라이언트 Ready 상태 확인 |
 
-소수점 둘째 자리까지 표기한다 (예: 8.52%).
+#### 주요 조작 흐름
 
-### 5.2. 뼈 인벤토리 규칙
+**라운드 시작 (Phase 1)**
+1. `Round & Phase Control` → 라운드 선택 → `Set Round` 클릭
+2. 타이머 자동 3분 시작됨 (Phase 1 기본값)
+3. 고고학자 팀이 전략을 논의하는 동안 타이머 진행
 
-- 뼈는 라운드를 걸쳐 계속 누적된다. 감소하지 않는다.
-- 화석 제출 시 뼈가 소비(차감)되지 않는다. 평가 후 반환되는 개념이다.
-- 제출 수량은 보유량을 초과할 수 없다 (클라이언트 측 유효성 검사).
+**Phase 2~3 (미션 수행 / 귀환)**
+1. `Set Phase` → `2` 클릭 → 각 역할 방으로 이동
+2. 미션 완료 후 `Set Phase` → `3` 클릭
 
-### 5.3. 카드 상태 전이
+**Phase 4 (보상 지급)**
+1. `Set Phase` → `4` 클릭
+2. **서버가 자동으로** 이번 라운드에 등록된 뼈 카드/발굴가 배분 결과를 각 반의 뼈 보유량에 반영
+3. `Status Boards` (대시보드)에서 자동 갱신 확인
 
-```
-[스캔] -> PENDING -> [교환] -> LOCKED -> [Phase 4 전환] -> RELEASED
-                              또는
-[스캔] -> PENDING -> [Phase 4 전환] -> RELEASED (교환 없이 바로 지급)
-```
+**Phase 5 (화석 복원 제출)**
+1. `Set Phase` → `5` 클릭
+2. 각 반이 dashboard.html에서 뼈 수를 입력하고 Submit
+3. `Fossil Submissions` 패널에서 제출 현황 확인
+4. 제출 완료된 반에 대해 `Lock` 클릭 → 더 이상 수정 불가
 
-Phase 4로 전환하는 순간, 해당 라운드의 PENDING/LOCKED 카드가 모두 RELEASED로 변경되고, BONE 타입 카드의 뼈가 해당 반의 인벤토리에 자동 가산된다.
+**랭킹 공개 및 다음 라운드 진행**
+1. `Reveal Ranks` 버튼 클릭 (최소 1반이 제출해야 활성화)
+2. 모든 대시보드 화면에 랭킹 오버레이가 표시됨
+3. 8초 후 자동으로 다음 라운드로 진행 (Phase 1, 타이머 5분 자동 시작)
+4. 원하면 `Hide Ranks` 버튼으로 수동 닫기 (이 경우 라운드 자동 진행 없음)
 
-### 5.4. 페이즈 구성
+**6라운드 최종 랭킹**
+1. `Reveal Ranks` → `isFinal=true` 플래그 전송
+2. 1등 반의 카드에 금색 테두리와 glow 효과 표시
+3. 자동 진행 없이 영구 표시 (수동으로 `Hide Ranks` 클릭 필요)
 
-| 번호 | 이름 | 내용 |
-|------|------|------|
-| 1 | Planning | 전략 수립 시간 |
-| 2 | Execution | 보물찾기(Client C) 및 발굴가 미니게임(Client B) 진행 |
-| 3 | Smuggling | 밀거래상 강제 교환(Client D) 진행 |
-| 4 | Distribution | 카드 일괄 지급. BONE 카드의 뼈가 인벤토리에 반영됨 |
-| 5 | Fossil Restore | 화석 복원 제출 및 오차율 결과 공개 |
+**수동 오버라이드**
+- `Bone Count Editor`: 특정 반의 뼈 수를 직접 수정 (오류 수정용)
+- `Override` 버튼: 특정 반의 제출 수치를 강제로 변경 후 오차율 재계산
 
-모든 페이즈 전환은 수동이다. 타이머가 0이 되어도 자동으로 넘어가지 않으며, 반드시 운영진(Client X)이 버튼을 눌러야 한다.
+**긴급 공지**
+1. `Emergency Alert` 패널에 메시지 입력
+2. `Send Alert` → 모든 클라이언트의 화면 상단에 공지 배너 표시
+3. `Close Alert` → 배너 제거
 
----
-
-## 6. 설치 및 실행
-
-### 6.1. 사전 요구사항
-
-- Node.js (v18 이상 권장)
-- npm (Node.js와 함께 설치됨)
-
-### 6.2. 설치
-
-```bash
-cd dinosaur_fossil_expedition
-npm install
-```
-
-### 6.3. 서버 실행
-
-```bash
-node server.js
-```
-
-기본 포트는 3000이다. 서버가 정상 가동되면 "Server listening on port 3000" 메시지가 출력된다.
-
-### 6.4. 접속
-
-같은 네트워크(Wi-Fi)에 연결된 장비의 브라우저에서 아래 주소로 접속한다.
-localhost 자리에 서버 PC의 IP 주소를 넣으면 다른 장비에서도 접속 가능하다.
-
-| 페이지 | 주소 |
-|--------|------|
-| 역할 선택 | http://localhost:3000/ |
-| 마스터 콘솔 | http://localhost:3000/admin.html |
-| 27반 대시보드 | http://localhost:3000/dashboard.html?class_id=27 |
-| 28반 대시보드 | http://localhost:3000/dashboard.html?class_id=28 |
-| 29반 대시보드 | http://localhost:3000/dashboard.html?class_id=29 |
-| 30반 대시보드 | http://localhost:3000/dashboard.html?class_id=30 |
-| 31반 대시보드 | http://localhost:3000/dashboard.html?class_id=31 |
-| 발굴가 | http://localhost:3000/excavator.html |
-| 보물찾기 | http://localhost:3000/researcher.html |
-| 밀거래상 | http://localhost:3000/smuggler.html |
-
-### 6.5. 데이터 초기화
-
-리허설 후 본 게임을 시작하기 전에 database.db 파일을 삭제하고 서버를 재시작하면 모든 데이터가 0으로 리셋된다.
+**게임 초기화**
+- `http://localhost:3000/api/reset` POST 요청 → 모든 카드, 뼈, 제출 이력 초기화
 
 ---
 
-## 7. 클라이언트별 사용법
+### 6.2. Client A — dashboard.html (반별 대시보드)
 
-### 7.1. Client X - 마스터 콘솔 (admin.html)
+**접속**: `http://localhost:3000/dashboard.html?class_id=27` (27~31 중 해당 반 번호)  
+**사용자**: 각 반 디렉터 (5명). 빔프로젝터 화면으로 띄워놓음
 
-운영진이 게임 전체를 제어하는 화면이다.
+#### 화면 구성 (항상 표시)
 
-기능 목록:
-- 현재 라운드/페이즈 확인
-- Set Round: 드롭다운에서 라운드를 선택하고 버튼을 누르면 전체 게임의 현재 라운드가 변경된다
-- Force Phase: 드롭다운에서 페이즈를 선택하고 버튼을 누르면 모든 클라이언트의 페이즈가 강제 전환된다
-- Manual Bone Edit: 특정 반의 특정 뼈 종류에 양수 또는 음수를 입력하여 보유량을 직접 조정한다 (패널티, 보너스 등)
-- Timer: 전체 게임의 타이머를 설정(1~30분), 시작, 정지할 수 있으며 클라이언트 화면에 동기화된다.
-- Submission Approvals: 제출된 화석 조합을 확인하고 잠금(Lock)/해제(Unlock)하여 최종 확정한다.
-- Reveal Rankings: 제출된 화석의 오차율(%)을 바탕으로 순위를 순차적으로 클라이언트 화면에 공개한다.
-- Classes State: 5개 반의 현재 뼈 보유량을 실시간으로 표시한다
-- DB 초기화 및 로그 내역 추출(Export Log) 기능 지원
+| 영역 | 내용 |
+|------|------|
+| 헤더 — 타이틀 | `Class XX Dashboard` |
+| 헤더 — 타이머 | 현재 남은 시간 (00:00 형식, 시간 만료 시 깜빡임) |
+| 헤더 — Round/Phase | 현재 라운드와 페이즈 번호 |
+| 헤더 — Ready 버튼 | 준비 완료 신호 전송 (토글) |
+| 헤더 — Status Boards 버튼 | 보조 정보 모달 열기/닫기 |
+| Fossil Inventory | 현재 반의 뼈 보유량 (Skull / Torso / Leg / Tail) |
+| Group Roles | 현재 라운드의 A~D 조별 역할 |
+| Past Restorations | 과거 라운드별 제출 기록 및 랭킹 (#1 ~ #5) |
+| Unlocked Hints | RELEASED 상태의 힌트 카드 내용 (라운드별 정렬) |
 
-모든 조작에는 확인(confirm) 창이 뜬다.
+#### Phase 5에서만 표시
 
-### 7.2. Client A - 반별 대시보드 (dashboard.html)
+| 영역 | 내용 |
+|------|------|
+| Submit Fossil Restoration | Skull / Torso / Leg / Tail 수 입력 후 제출 |
 
-각 반의 강의실 빔프로젝터에 띄우는 학생용 화면이다.
-URL 끝에 ?class_id=27 형식으로 반 번호를 지정해야 한다. 지정하지 않으면 prompt 창이 뜬다.
+> **주의**: 제출 수치는 현재 보유량을 초과할 수 없음. Admin이 Lock하면 수정 불가.
 
-화면 구성:
-- 상단: 반 이름, 타이머 동기화 화면, 현재 라운드/페이즈
-- 중앙 상단: 뼈 인벤토리 (시각적인 PNG 아이콘과 함께 4종류 뼈의 보유량 표시)
-- 조별 역할 로테이션: 해당 라운드의 역할(고고학자, 발굴가 등) 배정 결과를 안내
-- 좌측 하단: 해제된 힌트 목록 (RELEASED된 HINT 카드의 텍스트)
-- 우측 하단: 보물찾기 공개창 (현재 라운드의 모든 카드 등록/교환 현황)
-- Phase 5에서만: 화석 복원 제출 폼이 나타남 (Lock 되기 전까지 여러 번 수정 및 제출 가능)
+#### Status Boards 모달
 
-화석 제출 시 각 뼈의 보유량을 초과하는 숫자를 입력하면 에러가 발생하고 제출이 차단된다. 운영진이 결과 공개(Reveal)를 활성화하면 반별 순위가 순차적 애니메이션과 함께 오버레이로 뜬다.
+`Status Boards` 버튼 클릭 시 전체 화면 모달 팝업:
 
-### 7.3. Client B - 발굴가 드래프트 (excavator.html)
+| 패널 | 내용 |
+|------|------|
+| Excavator Distributions | 이번 라운드 각 반에 배정된 Sack 이름 |
+| Global Treasure Hunt Board | 모든 반의 현재 라운드 카드 현황 (Class / Card ID / Type / Status / Contents) |
 
-미니게임 결과에 따라 1~5위를 매기고, 각 반에 뼈 포대를 배분하는 화면이다.
+> Contents 열: BONE 카드는 뼈 종류별 수량을 PNG 아이콘과 함께 표시
 
-사용법:
-1. Rank 1부터 5까지, 각 rank에 해당하는 반을 드롭다운에서 선택한다.
-2. 각 rank 옆의 Sack 버튼(A~E) 중 하나를 클릭한다. 선택된 Sack은 다른 rank에서 비활성화된다.
-3. 같은 반을 두 번 선택하면 에러가 뜬다.
-4. 5개 rank 모두 반과 Sack이 지정되면 Finalize Distribution 버튼이 활성화된다.
-5. 버튼을 누르면 서버로 전송되어 해당 Sack의 뼈가 각 반 인벤토리에 자동 반영된다.
-6. Reset All 버튼으로 선택을 초기화할 수 있다.
+#### 랭킹 공개 오버레이
 
-### 7.4. Client C - 보물찾기 스캐너 (researcher.html)
+Admin이 `Reveal Ranks` 클릭 시:
+- 전체 화면을 덮는 **Round Results** 오버레이 표시
+- 각 반의 결과가 1초 간격으로 아래에서 위로 순차 등장 (최하위 → 최상위 순)
+- 6라운드(최종 라운드)의 1등 반: 금색 테두리 + glow 효과
+- 8초 후 자동으로 닫히고 다음 라운드로 전환
+- 오버레이가 닫힌 후에는 **Past Restorations** 표에서 해당 라운드 랭킹 영구 확인 가능
 
-대학원생 방 디렉터가 학생들이 찾아온 물리적 카드의 ID를 시스템에 등록하는 화면이다.
+#### Ready 기능
 
-사용법:
-1. Card ID 입력란에 카드에 적힌 ID를 타이핑한다 (예: "1-Bone A", "1-1").
-2. Type 드롭다운에서 Hint Card 또는 Bone Card를 선택한다.
-3. Found By Class 드롭다운에서 카드를 찾은 반을 선택한다.
-4. Register Card 버튼을 누르면 서버에 PENDING 상태로 등록된다.
-5. Enter 키를 눌러도 등록이 가능하다 (빠른 연속 스캔용).
-6. 현재 라운드에 속하지 않는 카드 ID를 입력하면 경고와 함께 차단된다.
-7. 우측의 Recent Scans 목록에서 PENDING 상태의 카드를 Undo 버튼으로 삭제할 수 있다.
-8. 등록 성공 시 화면이 잠깐 녹색으로 깜빡인다.
+- `Ready` 버튼을 클릭하면 `Ready OK` 상태로 변경
+- Admin 화면의 `Ready Status` 패널에 실시간으로 반영
 
-### 7.5. Client D - 밀거래상 교환 (smuggler.html)
+#### 힌트 감정권 사용
 
-밀거래상 교환 순서에 따라, 각 반이 다른 반의 PENDING 카드를 1장 강탈하고 자신의 카드 1장을 넘겨주는 화면이다.
-
-사용법:
-1. Acting Class에서 교환 순번이 된 반을 선택한다.
-2. My Card to Give에서 내가 넘겨줄 카드를 선택한다.
-3. Target Class to Steal From에서 상대 반을 선택한다.
-4. Target's Card to Steal에서 뺏어올 카드를 선택한다.
-5. Execute Exchange를 누르면 두 카드의 소유권이 교환되고 LOCKED 상태가 된다.
-6. 보유 카드가 0장이면 Pass 버튼으로 차례를 넘긴다.
-7. 우측 Pending Pool 테이블에서 현재 교환 가능한 카드 목록을 확인할 수 있다.
-
-주의: 교환 실행 취소(Undo) 기능은 없다. 실수 시 운영진(Client X)에서 수동 조정해야 한다.
+- `[TICKET]` 태그가 붙은 힌트 카드는 클릭하면 취소선 처리 (로컬 저장)
+- 사용한 감정권은 반투명 처리되어 한눈에 구분 가능
 
 ---
 
-## 8. 데이터 파일 편집 가이드
+### 6.3. Client B — excavator.html (발굴가 드래프트)
 
-### 8.1. answers.json
+**접속**: `http://localhost:3000/excavator.html`  
+**사용자**: 발굴가 방 디렉터 (1명)  
+**사용 시점**: Phase 2 — 발굴가 미니게임 결과에 따라 뼈 포대 배분
 
-각 반의 정답 뼈 조합을 정의한다. 게임 시작 전 확정하고 절대 변경하지 않는다.
-H(Skull), B(Torso), L(Leg), T(Tail)의 합계가 약 140이 되도록 설정한다.
+#### 화면 구성
+
+| 영역 | 내용 |
+|------|------|
+| Draft Assignments | 각 반(27~31)에 배정할 Sack 선택 드롭다운 |
+| Sack Contents | 현재 라운드의 Sack별 뼈 수량표 |
+| Finalize Distribution 버튼 | 배분 결정 및 서버 전송 |
+| Reset All 버튼 | 현재 드래프트 초기화 |
+
+#### 사용법
+
+1. 미니게임 결과에 따라 각 반에 적합한 Sack을 드롭다운으로 선택
+2. 우측 패널에서 각 Sack의 뼈 구성 확인 (Skull / Torso / Leg / Tail / Total)
+3. 모든 반에 Sack 배정이 완료되면 `Finalize Distribution` 버튼 활성화
+4. 클릭 시 서버에 전송 → 서버가 각 반의 뼈 보유량에 즉시 반영
+5. 배분은 **Phase 4 이전에만** 실행해야 함 (Phase 4 전환 시 서버가 별도 카드 보상도 자동 지급)
+
+> **중요**: `Finalize Distribution`을 한 번 클릭하면 서버가 실제로 뼈를 추가함.  
+> 실수로 중복 클릭 시 뼈가 2번 추가되므로 주의. 필요 시 Admin에서 `Bone Count Editor`로 수동 수정.
+
+---
+
+### 6.4. Client C — researcher.html (대학원생 카드 스캐너)
+
+**접속**: `http://localhost:3000/researcher.html`  
+**사용자**: 대학원생 방 디렉터 (1명)  
+**사용 시점**: Phase 2 — 보물찾기 미션에서 획득한 카드를 등록
+
+#### 화면 구성
+
+| 영역 | 내용 |
+|------|------|
+| Pending Pool | 현재 라운드에 등록된 카드 목록 (Class / Card ID / Type / Status) |
+| Card Registration | 카드 ID 입력 및 소유 반 선택 후 등록 |
+
+#### 사용법
+
+1. **소유 반 선택**: 드롭다운에서 카드를 획득한 반(27~31) 선택
+2. **카드 ID 입력**: 텍스트 박스에 카드 ID 입력 (예: `1-A`, `2-H3`)
+   - 여러 카드를 한 번에 입력 시 줄바꿈 또는 쉼표로 구분
+3. **Register Cards** 클릭
+4. 서버가 유효성 검사:
+   - 존재하지 않는 카드 ID → 오류 메시지
+   - 현재 라운드와 다른 라운드의 카드 → 오류 메시지
+   - 이미 등록된 카드 → 오류 메시지
+5. 등록 성공 시 Pending Pool에 즉시 표시
+6. 잘못 등록한 카드는 `Delete` 버튼으로 삭제 (PENDING 상태인 경우만 가능)
+
+> **BONE 카드**: 등록 시 뼈 보유량에 즉시 반영되지 않음.  
+> Admin이 Phase 4로 전환할 때 서버가 모든 BONE 카드를 일괄 처리하여 반영함.
+
+> **HINT 카드**: 등록 후 Admin이 Phase 4로 전환하면 RELEASED 상태로 변경되어 해당 반 dashboard에 힌트 내용이 표시됨.
+
+---
+
+### 6.5. Client D — smuggler.html (밀거래상 교환 패널)
+
+**접속**: `http://localhost:3000/smuggler.html`  
+**사용자**: 밀거래상 방 디렉터 (1명)  
+**사용 시점**: Phase 2 — 두 반 사이의 카드를 강제 교환
+
+#### 화면 구성
+
+| 영역 | 내용 |
+|------|------|
+| Smuggler Pending Pool | 현재 라운드 전체 카드 현황 (카드 아이콘으로 뼈 구성 표시) |
+| Exchange Panel | 교환할 카드 2개 선택 후 Confirm Exchange |
+
+#### 사용법
+
+1. **교환 카드 선택**:
+   - 좌측 드롭다운: 내가 줄 반 / 카드
+   - 우측 드롭다운: 상대방 반 / 카드
+2. **Lock Card (선택적)**: 내 카드 1개를 잠금 → 이 카드는 상대가 선택 불가
+   - 잠금은 반당 1개만 허용 (새로 잠그면 이전 잠금 해제)
+3. **Confirm Exchange** 클릭
+   - 선택한 두 카드의 소유 반이 교환됨
+   - 두 카드 모두 `LOCKED` 상태로 변경 (더 이상 재교환 불가)
+4. Pending Pool에서 교환 결과를 실시간 확인
+
+> **LOCKED 카드**: 교환 완료된 카드는 다시 교환 불가.  
+> Admin의 Phase 4 전환 시 LOCKED 포함 모든 미처리 카드가 RELEASED로 일괄 처리됨.
+
+---
+
+## 7. 주요 자동화 흐름
+
+### Phase 4 전환 시 서버 자동 처리
+
+Admin이 Phase를 4로 변경하면:
+1. 현재 라운드의 모든 `PENDING` + `LOCKED` 카드를 RELEASED로 일괄 변경
+2. BONE 카드의 뼈 수량을 해당 반의 `classes` 테이블에 누적 합산
+3. 모든 클라이언트에 `state:update` 이벤트 전송 → 즉시 UI 갱신
+
+### 라운드 전환 시 서버 자동 처리
+
+Admin이 라운드를 변경하거나 Reveal Ranks 후 8초가 지나면:
+1. 라운드 번호 증가, Phase를 1로 초기화
+2. Ready 상태 전체 초기화
+3. 타이머 5분 자동 시작
+4. 모든 클라이언트에 `ROUND X` 전환 애니메이션 표시
+
+---
+
+## 8. REST API
+
+| 엔드포인트 | 메서드 | 설명 |
+|-----------|--------|------|
+| `/api/export` | GET | 전체 게임 로그 텍스트 파일 다운로드 |
+| `/api/reset` | POST | 게임 초기화 (카드, 뼈, 로그, 라운드 모두 리셋) |
+
+---
+
+## 9. 오차율 계산 공식
+
+```
+N = 정답 뼈 총합 (Skull + Torso + Leg + Tail)
+E = |제출 Skull - 정답 Skull| + |제출 Torso - 정답 Torso|
+  + |제출 Leg - 정답 Leg| + |제출 Tail - 정답 Tail|
+
+Error Rate = (E / N) × 100 (%)
+```
+
+- 1~5라운드: 소수점 반올림하여 정수% 표시
+- 6라운드(최종): 소수점 2자리까지 표시 (예: `66.25%`)
+
+---
+
+## 10. 데이터 파일 수정 가이드
+
+### answers.json (정답 변경 시)
 
 ```json
 {
-  "27": { "H": 30, "B": 50, "L": 40, "T": 20 },
-  "28": { "H": 25, "B": 45, "L": 45, "T": 25 }
+  "27": { "H": 20, "B": 15, "L": 10, "T": 5 },
+  "28": { "H": 18, "B": 12, "L": 8, "T": 6 },
+  ...
 }
 ```
+- H: Skull(머리뼈), B: Torso(몸통뼈), L: Leg(다리뼈), T: Tail(꼬리뼈)
+- **수정 후 서버 재시작 필요**
 
-### 8.2. hints.json
-
-힌트 카드 ID와 반 번호를 기준으로, 해당 카드가 해제되었을 때 보여줄 영문 텍스트를 정의한다.
-HTML 태그를 사용하여 특정 단어에 색상을 입힐 수 있다.
-
-카드 ID는 hints_example.csv의 id 컬럼과 정확히 일치해야 한다 (예: "1-1", "2-3").
-같은 카드 ID라도 반마다 다른 텍스트를 표시할 수 있다.
+### hints.json (힌트 텍스트 수정 시)
 
 ```json
 {
   "27": {
-    "1-1": "The <span style='color:orange;'>Skull</span> fragments outnumber the Tail.",
-    "1-2": "This dinosaur had a large body."
+    "1-H1": "The skull count is greater than the tail count.",
+    "1-H2": "감정권: 이 힌트를 사용하면 정답 범위를 알 수 있습니다."
   },
-  "28": {
-    "1-1": "The <span style='color:orange;'>Torso</span> fragments are dominant."
-  }
+  ...
 }
+```
+- 키: `{반번호}` → 카드 ID → 힌트 텍스트
+- `감정권` 포함 시 대시보드에서 클릭 가능한 감정권 형태로 렌더링
+- **수정 후 서버 재시작 필요**
+
+### treasure_bone_cards.csv (뼈 카드 구성 변경 시)
+
+```csv
+card name,skull bone,torso bone,leg bone,tail bone
+1-A,2,1,0,0
+1-B,0,3,1,0
+...
+```
+
+### excavator_rewards.csv (포대 보상 변경 시)
+
+```csv
+round,sack,skull bone,torso bone,leg bone,tail bone
+1,A. Skull-Focused Sack,8,2,1,1
+1,B. Torso-Focused Sack,2,8,1,1
+...
 ```
 
 ---
 
-## 9. 최근 업데이트 내역 및 배포 준비 상태 (Release Ready)
+## 11. 트러블슈팅
 
-본 프로젝트는 대규모 리팩토링 및 최종 품질 감사(Quality Audit)를 성공적으로 마쳤으며, 오프라인 현장 진행에 최적화된 100% Production-Ready 상태입니다.
+| 증상 | 원인 | 해결 |
+|------|------|------|
+| 랭킹 오버레이가 안 뜸 | 해당 라운드에 제출 데이터 없음 | Phase 5에서 각 반이 Submit 후 Admin이 Reveal Ranks |
+| Reveal Ranks 버튼이 비활성화 | 아직 아무 반도 제출 안 함 | 최소 1반이 Submit 하면 활성화 |
+| 뼈 수가 음수 | 수동 입력 오류 | Admin의 Bone Count Editor로 수정 (서버가 MAX(0, value)로 보정) |
+| 카드 등록 실패 | 라운드 불일치, 중복, 또는 존재하지 않는 ID | researcher.html 오류 메시지 확인 |
+| 화면이 갱신 안 됨 | 소켓 연결 끊김 | 우측 하단 연결 표시등 확인 (빨간색 = 연결 끊김). 페이지 새로고침 |
+| Phase 4 전환 후 뼈 미반영 | 카드가 PENDING이 아닌 다른 상태 | server.js 로그에서 경고 메시지 확인 |
 
-- **디자인 규칙 통일**: 기존의 이모티콘 사용을 전면 배제하고 리소스 폴더의 실제 PNG 아이콘(Skull, Torso, Leg, Tail)으로 대체했습니다. 색상 역시 버건디(#440000) 및 흑백(White & Dark) 기반으로 강제 통일하여 시각적 완성도와 프리미엄한 느낌을 높였습니다.
-- **기능 추가 및 개선**: 
-  - 타이머 동기화 기능, 조별 역할(A,B,C,D) 로테이션 자동 안내, 제출된 화석의 재제출 및 운영진 잠금(Lock) 시스템이 도입되었습니다.
-  - 대시보드의 테이블(Past Restorations) 열 구조를 PNG 뼈 아이콘 단위로 세분화하여 숫자와 완벽히 중앙 정렬되도록 가독성을 극대화했습니다.
-- **운영진(Admin) 자동화 및 상태 동기화**:
-  - 모든 디렉터(27~31반 대시보드, 발굴가, 보물찾기, 밀거래상)의 Ready 여부를 Admin에서 한눈에 모니터링할 수 있는 전용 상태창(Grid)을 구현했습니다.
-  - 순위 공개(Reveal)가 10초 후 종료되면(또는 Admin이 숨기면) 서버가 자동으로 다음 라운드의 Phase 1로 강제 전환하고 5분 타이머를 즉시 시작하는 자동화(Auto-advance) 로직을 탑재했습니다. Admin 콘솔의 드롭다운 수치도 이 변화에 맞춰 스스로 실시간 동기화됩니다.
-  - Phase 5 오차율 순위 공개(Reveal Ranking) 시, 오차율이 가장 높은(성적이 안 좋은) 팀부터 5위로 공개되며 가장 잘 맞힌 팀이 1위로 마지막에 등장하도록 정렬 로직을 바로잡아 긴장감 넘치는 연출을 완성했습니다.
-- **서버 및 클라이언트 무결성 확보**: 불필요하게 팝업창을 띄워 오류를 유발하던 로직(Class ID 강제 입력 등)을 클라이언트에서 완전히 제거했으며, 모든 소켓 페이로드에 대한 엄격한 타입 검증을 적용하여 서버 다운 및 데이터(`NaN`) 오염 취약점을 차단했습니다.
+---
+
+## 12. 게임 진행 체크리스트
+
+### 매 라운드 시작 전
+
+- [ ] Admin에서 올바른 라운드 번호 설정 확인
+- [ ] 각 반 dashboard.html이 올바른 class_id로 접속됐는지 확인
+- [ ] 연결 표시등이 모두 초록색인지 확인
+- [ ] Ready 상태가 모두 초기화됐는지 확인
+
+### Phase 2 진행 중
+
+- [ ] Excavator: 미니게임 결과에 따라 Sack 배정 후 Finalize 클릭
+- [ ] Researcher: 보물찾기 획득 카드 등록
+- [ ] Smuggler: 해당되는 경우 카드 교환
+
+### Phase 4 전환 시
+
+- [ ] Admin이 Phase 4 클릭 → 뼈 자동 반영 확인
+- [ ] 각 반 대시보드에서 Fossil Inventory 숫자가 갱신됐는지 확인
+
+### Phase 5 종료 후
+
+- [ ] 모든 반이 Submit 완료했는지 확인
+- [ ] Admin이 각 반 Lock 클릭
+- [ ] Reveal Ranks 클릭

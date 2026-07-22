@@ -321,7 +321,7 @@ io.on('connection', (socket) => {
                     startServerTimer(3); // Auto start 3 min timer for Phase 1
                     getFullState(state => {
                         io.emit('state:update', state);
-                        io.emit('phase:sync', 1);
+                        io.emit('sync:phase', 1);
                     });
                 });
             });
@@ -393,21 +393,35 @@ io.on('connection', (socket) => {
     socket.on('admin:revealResults', (data) => {
         logEvent('Admin', `Revealed rankings`);
         const { round, isFinal } = data;
+
         db.all(
-            `SELECT class_id, error_rate FROM restoration_history WHERE round = ? AND is_locked = 1 ORDER BY error_rate DESC, id DESC`,
+            `SELECT class_id, error_rate FROM restoration_history WHERE round = ? ORDER BY is_locked DESC, id DESC`,
             [round],
-            (err, rows) => {
-                if (rows && rows.length > 0) {
-                    io.emit('reveal:show', { results: rows, isFinal: isFinal, round: round });
-                    
+            (err, allRows) => {
+                if (err) { console.error('[REVEAL] DB error:', err); return; }
+
+                // Deduplicate: keep one row per class_id (locked first, then latest)
+                const seen = new Set();
+                const results = [];
+                for (const r of (allRows || [])) {
+                    if (!seen.has(r.class_id)) {
+                        seen.add(r.class_id);
+                        results.push(r);
+                    }
+                }
+                results.sort((a, b) => b.error_rate - a.error_rate);
+
+                if (results.length > 0) {
+                    io.emit('reveal:show', { results: results, isFinal: isFinal, round: round });
                     if (revealTimer) clearTimeout(revealTimer);
-                    
                     if (!isFinal) {
                         revealTimer = setTimeout(() => {
-                            io.emit('reveal:hide', { isAdvancing: round < 6 });
+                            io.emit('reveal:hide');
                             autoAdvanceRound();
                         }, 8000);
                     }
+                } else {
+                    socket.emit('admin:alertMessage', `No submissions found for Round ${round}`);
                 }
             }
         );
@@ -415,11 +429,8 @@ io.on('connection', (socket) => {
 
     socket.on('admin:hideResults', () => {
         if (revealTimer) clearTimeout(revealTimer);
-        db.get(`SELECT value FROM game_state WHERE key = 'current_round'`, (err, row) => {
-            let currentRound = row ? parseInt(row.value) : 1;
-            io.emit('reveal:hide', { isAdvancing: currentRound < 6 });
-            autoAdvanceRound();
-        });
+        io.emit('reveal:hide');
+        // NOTE: Do NOT call autoAdvanceRound() here — Hide Ranks should just hide the overlay
     });
 
     // ── Approval workflow -> Lock workflow (Task 14) ──

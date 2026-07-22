@@ -37,14 +37,37 @@
             animation: pulse 2s infinite;
         }
         /* Result Reveal Cards */
+        .result-card {
+            background: var(--panel-bg);
+            border: 2px solid var(--primary-color);
+            border-radius: 12px;
+            padding: 20px 30px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.5em;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .result-card.visible { opacity: 1; transform: translateY(0); }
+        .result-card.winner {
+            border-color: #ffd700;
+            box-shadow: 0 0 30px rgba(255,215,0,0.5);
+            font-size: 1.8em;
+        }
     </style>
 </head>
 <body>
     <div class="overlay">
         <div class="panel" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
-            <div style="flex: 1; text-align: left;"><h1 id="classTitle" style="margin-bottom:0;">Class Dashboard</h1></div>
+            <div style="flex: 1.5; text-align: left; display: flex; align-items: center; gap: 15px;">
+                <h1 id="classTitle" style="margin-bottom:0; white-space:nowrap;">Class Dashboard</h1>
+                <button id="btnStatusBoards" class="btn-ready" onclick="toggleStatusBoards()" style="background:var(--panel-bg); color:var(--text-main); border-color:var(--border-color); font-size:0.7em; padding:8px 12px; white-space:nowrap;">Status Boards</button>
+            </div>
             <div style="flex: 1; text-align: center;"><div class="timer" id="timerDisplay" style="font-size:2.5em; display:inline-block;">00:00</div></div>
-            <div style="flex: 1; font-size: 1.5em; display: flex; align-items: center; justify-content: flex-end; gap: 15px; position: relative;">
+            <div style="flex: 1.5; font-size: 1.5em; display: flex; align-items: center; justify-content: flex-end; gap: 15px; position: relative;">
                 <div id="alertBanner" class="alert-banner" style="display:none; position: absolute; left: 0; top: 50%; transform: translateY(-50%); z-index: 100;"></div>
                 <button id="btnReadyToggle" class="btn-ready" onclick="toggleReady()">Ready</button>
                 <div style="text-align: right;">
@@ -54,32 +77,46 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-2" style="gap: 10px;">
-            <div class="panel flex-col" style="padding: 10px; justify-content: space-evenly;">
-                <h2 style="font-size: 1.2em; margin-bottom: 10px;">Fossil Inventory</h2>
-                <div class="grid grid-cols-4 flex-1" id="inventory" style="text-align:center; align-items:center;">
-                    <div style="padding: 10px;"><span style="font-size: 2.5em; display:block; margin-bottom:10px;"><img src="resources/skull.png" style="height:1em; vertical-align:middle;"></span><span style="font-size:1.2em; color:var(--text-muted);">Skull</span><br><strong id="invH" style="font-size: 2em; color:var(--primary-color);">0</strong></div>
-                    <div style="padding: 10px;"><span style="font-size: 2.5em; display:block; margin-bottom:10px;"><img src="resources/torso.png" style="height:1em; vertical-align:middle;"></span><span style="font-size:1.2em; color:var(--text-muted);">Torso</span><br><strong id="invB" style="font-size: 2em; color:var(--primary-color);">0</strong></div>
-                    <div style="padding: 10px;"><span style="font-size: 2.5em; display:block; margin-bottom:10px;"><img src="resources/leg.png" style="height:1em; vertical-align:middle;"></span><span style="font-size:1.2em; color:var(--text-muted);">Leg</span><br><strong id="invL" style="font-size: 2em; color:var(--primary-color);">0</strong></div>
-                    <div style="padding: 10px;"><span style="font-size: 2.5em; display:block; margin-bottom:10px;"><img src="resources/tail.png" style="height:1em; vertical-align:middle;"></span><span style="font-size:1.2em; color:var(--text-muted);">Tail</span><br><strong id="invT" style="font-size: 2em; color:var(--primary-color);">0</strong></div>
+        <div class="grid flex-1" style="gap: 10px; grid-template-columns: 1fr 2fr; min-height: 0;">
+            <!-- Left Column: Inventory, Roles, Past Restorations -->
+            <div class="flex-col" style="gap: 10px; min-height: 0;">
+                <div class="panel flex-col" style="padding: 10px; justify-content: space-evenly; flex: 0 0 auto;">
+                    <h2 style="font-size: 1.2em; margin-bottom: 10px;">Fossil Inventory</h2>
+                    <div class="grid grid-cols-4" id="inventory" style="text-align:center; align-items:center;">
+                        <div style="padding: 10px;"><span style="font-size: 2.5em; display:block; margin-bottom:10px;"><img src="resources/skull.png" style="height:1em; vertical-align:middle;"></span><span style="font-size:1.2em; color:var(--text-muted);">Skull</span><br><strong id="invH" style="font-size: 2em; color:var(--primary-color);">0</strong></div>
+                        <div style="padding: 10px;"><span style="font-size: 2.5em; display:block; margin-bottom:10px;"><img src="resources/torso.png" style="height:1em; vertical-align:middle;"></span><span style="font-size:1.2em; color:var(--text-muted);">Torso</span><br><strong id="invB" style="font-size: 2em; color:var(--primary-color);">0</strong></div>
+                        <div style="padding: 10px;"><span style="font-size: 2.5em; display:block; margin-bottom:10px;"><img src="resources/leg.png" style="height:1em; vertical-align:middle;"></span><span style="font-size:1.2em; color:var(--text-muted);">Leg</span><br><strong id="invL" style="font-size: 2em; color:var(--primary-color);">0</strong></div>
+                        <div style="padding: 10px;"><span style="font-size: 2.5em; display:block; margin-bottom:10px;"><img src="resources/tail.png" style="height:1em; vertical-align:middle;"></span><span style="font-size:1.2em; color:var(--text-muted);">Tail</span><br><strong id="invT" style="font-size: 2em; color:var(--primary-color);">0</strong></div>
+                    </div>
                 </div>
-            </div>
-            <div class="flex-col" style="gap:10px;">
-                <div class="panel flex-1 flex-col" style="padding: 10px; justify-content: center;">
+                
+                <div class="panel flex-col" style="padding: 10px; justify-content: center; flex: 0 0 auto;">
                     <h2 style="font-size: 1.1em; margin-bottom: 5px;">Group Roles (Round <span id="lblRoleRound">1</span>)</h2>
-                    <div id="roleTable" class="grid grid-cols-4" style="text-align:center; font-size:1em; font-weight:bold; color:var(--text-main); margin-top:5px;"></div>
+                    <div id="roleTable" class="grid grid-cols-2" style="text-align:center; font-size:1em; font-weight:bold; color:var(--text-main); margin-top:5px; gap: 8px;"></div>
                 </div>
-                <div class="panel flex-1 flex-col" style="padding: 10px; justify-content: center;">
-                    <h2 style="font-size: 1.1em; margin-bottom: 5px;">Excavator Distributions</h2>
-                    <div id="excavatorSacks" class="scrollable-panel" style="font-size: 1em; text-align:center; padding: 5px;">Waiting...</div>
+
+                <div class="panel flex-col flex-1" style="padding: 10px; margin: 0; min-height: 0;">
+                    <h2 style="font-size: 1.1em;">Past Restorations</h2>
+                    <div class="scrollable-panel flex-1">
+                        <table id="tblPastRestorations" style="width:100%; text-align:center; font-size:0.9em;">
+                            <tr>
+                                <th style="width:20%;">Round</th>
+                                <th style="width:15%;"><img src="resources/skull.png" style="height:1.2em; vertical-align:middle;" title="Skull"></th>
+                                <th style="width:15%;"><img src="resources/torso.png" style="height:1.2em; vertical-align:middle;" title="Torso"></th>
+                                <th style="width:15%;"><img src="resources/leg.png" style="height:1.2em; vertical-align:middle;" title="Leg"></th>
+                                <th style="width:15%;"><img src="resources/tail.png" style="height:1.2em; vertical-align:middle;" title="Tail"></th>
+                                <th style="width:20%;">Error Rate</th>
+                            </tr>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="grid grid-cols-2 flex-1" style="gap: 10px;">
-            <div class="panel flex-1 flex-col" style="padding: 10px;">
+            <!-- Right Column: Hints -->
+            <div class="panel flex-col flex-1" style="padding: 10px; min-height: 0;">
                 <h2 style="font-size: 1.1em;">Unlocked Hints</h2>
-                <div id="hintsList" class="scrollable-panel flex-1" style="font-size: 1em;"></div>
+                <div id="hintsList" class="scrollable-panel flex-1" style="font-size: 1em; padding-right:10px;"></div>
+                
                 <div id="pnlSubmitFossil" class="hidden" style="margin-top:10px; border-top:1px solid var(--border-color); padding-top:10px; flex-shrink: 0;">
                     <h2 style="font-size: 1.1em; color:var(--primary-color); margin-bottom:10px;">Submit Fossil Restoration</h2>
                     <div style="display:flex; justify-content:space-between; margin-bottom:10px; gap:10px;">
@@ -104,56 +141,51 @@
                     <div id="lblLockStatus" style="color: var(--accent-red); text-align: center; margin-top: 10px; display: none; font-weight: bold;"></div>
                 </div>
             </div>
-            
-            <div class="flex-col flex-1" style="gap: 10px;">
-                <div class="panel flex-col" style="padding: 10px; margin: 0; flex: 0 1 auto; max-height: 50%;">
-                    <h2 style="font-size: 1.1em;">Past Restorations</h2>
-                    <div class="scrollable-panel flex-1">
-                        <table id="tblPastRestorations" style="width:100%; text-align:center; font-size:0.9em;">
-                            <tr>
-                                <th style="width:20%;">Round</th>
-                                <th style="width:15%;"><img src="resources/skull.png" style="height:1.2em; vertical-align:middle;" title="Skull"></th>
-                                <th style="width:15%;"><img src="resources/torso.png" style="height:1.2em; vertical-align:middle;" title="Torso"></th>
-                                <th style="width:15%;"><img src="resources/leg.png" style="height:1.2em; vertical-align:middle;" title="Leg"></th>
-                                <th style="width:15%;"><img src="resources/tail.png" style="height:1.2em; vertical-align:middle;" title="Tail"></th>
-                                <th style="width:20%;">Error Rate</th>
-                            </tr>
-                        </table>
-                    </div>
+        </div>
+    </div>
+
+    <!-- Status Boards Modal (outside .overlay to avoid overflow:hidden clipping) -->
+    <div id="statusBoardsOverlay" style="opacity:0; transition: opacity 0.3s ease; display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(10,8,5,0.95); z-index:8000; flex-direction:column; justify-content:center; align-items:center;">
+        <div class="panel flex-col" style="width:90%; max-width:1200px; height:80%; max-height:800px; padding:20px; position:relative;">
+            <button onclick="toggleStatusBoards()" style="position:absolute; top:10px; right:10px; background:var(--accent-red); color:white; border:none; padding:8px 16px; cursor:pointer; font-weight:bold; border-radius:4px;">Close</button>
+            <div class="grid flex-1" style="gap:20px; min-height:0; margin-top:20px; grid-template-columns: 3fr 5fr;">
+                <div class="flex-col flex-1" style="min-height:0;">
+                    <h2 style="font-size: 1.2em; margin-bottom: 10px; color:var(--primary-color);">Excavator Distributions</h2>
+                    <div id="excavatorSacks" class="scrollable-panel flex-1" style="font-size: 1em;">Waiting...</div>
                 </div>
-                
-                <div class="panel flex-1 flex-col" style="padding: 10px; margin: 0;">
-                    <h2 style="font-size: 1.1em;">Global Treasure Hunt Board</h2>
+                <div class="flex-col flex-1" style="min-height:0;">
+                    <h2 style="font-size: 1.2em; margin-bottom: 10px; color:var(--primary-color);">Global Treasure Hunt Board</h2>
                     <div class="scrollable-panel flex-1">
-                        <table id="globalBoard" style="font-size:1em;">
-                            <tr><th>Class</th><th>Card ID</th><th>Type</th><th>Status</th></tr>
+                        <table id="globalBoard" style="font-size:1em; width:100%;">
+                            <!-- Headers dynamically injected -->
                         </table>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Result Reveal Overlay -->
-        <div id="resultOverlay" style="opacity:0; transition: opacity 0.8s ease; display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(10,8,5,0.95); z-index:9000; flex-direction:column; justify-content:center; align-items:center;">
-            <h1 style="font-size:2.5em; margin-bottom:30px;">Round Results</h1>
-            <div id="resultCards" style="width:80%; max-width:800px;"></div>
-        </div>
     </div>
 
     <div id="connectionDot" class="connection-indicator"></div>
+
+    <!-- Result Reveal Overlay (outside .overlay to avoid overflow:hidden clipping) -->
+    <div id="resultOverlay" style="opacity:0; transition: opacity 0.8s ease; display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(10,8,5,0.95); z-index:9000; flex-direction:column; justify-content:center; align-items:center;">
+        <h1 style="font-size:2.5em; margin-bottom:30px;">Round Results</h1>
+        <div id="resultCards" style="width:80%; max-width:800px; text-align:left;"></div>
+    </div>
 
     <script src="js/socket-client.js"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         let myClassId = urlParams.get('class_id');
-        let currentRound = 1;
-        if(!myClassId) {
-            myClassId = prompt("Enter Class ID (27, 28, 29, 30, 31):", "27");
+        if (!myClassId) {
+            myClassId = prompt("Enter your Class ID (e.g. 27, 28, 29, 30, 31):");
             window.location.search = `?class_id=${myClassId}`;
         }
         document.getElementById('classTitle').innerText = `Class ${myClassId} Dashboard`;
 
+        let currentRound = 1; // Tracks current round, updated on every state update
         window.classHints = {};
+        window.boneMap = {};
 
         socket.on('hints:data', (hints) => {
             window.classHints = hints;
@@ -162,8 +194,17 @@
             }
         });
 
+        socket.on('boneMap:data', (map) => {
+            window.boneMap = map;
+            if (window.gameState) {
+                window.onStateUpdate(window.gameState);
+            }
+        });
+
         socket.on('connect', () => {
             socket.emit('getHints', myClassId);
+            socket.emit('getBoneMap');
+            socket.emit('getReadyStatus');
             document.getElementById('connectionDot').classList.add('connected');
             document.getElementById('connectionDot').classList.remove('disconnected');
         });
@@ -204,8 +245,10 @@
             }
 
             if(state.cards) {
-                let html = '<tr><th>Class</th><th>Card ID</th><th>Type</th><th>Status</th></tr>';
+                let html = '<colgroup><col style="width: 15%;"><col style="width: 15%;"><col style="width: 15%;"><col style="width: 15%;"><col style="width: 40%;"></colgroup><tr><th>Class</th><th>Card ID</th><th>Type</th><th>Status</th><th>Contents</th></tr>';
                 let hintsHtml = '';
+                let usedTickets = JSON.parse(localStorage.getItem('usedTickets') || '{}');
+                let hintsByRound = {};
                 
                 const classGroups = { 27: [], 28: [], 29: [], 30: [], 31: [] };
                 let sortedCards = sortCards([...state.cards]);
@@ -215,28 +258,61 @@
                     }
                     
                     if(c.status === 'RELEASED' && c.owner_class_id == myClassId && c.type === 'HINT') {
+                        if (!hintsByRound[c.round]) hintsByRound[c.round] = [];
+                        hintsByRound[c.round].push(c);
+                    }
+                });
+
+                Object.keys(hintsByRound).sort((a,b) => parseInt(a) - parseInt(b)).forEach(rnd => {
+                    hintsHtml += `<h3 style="color:var(--primary-color); margin-top:15px; margin-bottom:5px; border-bottom:1px solid var(--border-color); padding-bottom:5px;">Round ${rnd}</h3>`;
+                    hintsByRound[rnd].forEach(c => {
                         const hintText = (window.classHints && window.classHints[c.card_id])
                             ? window.classHints[c.card_id] : `Unknown Hint: ${c.card_id}`;
                         const formattedHint = hintText.replace(/\b(skull|torso|leg|tail)\b/gi, match => {
                             const word = match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
                             return `<strong>${word}</strong>`;
                         });
-                        hintsHtml += `<div class="hint-text"><span style="color:var(--primary-color); margin-right:8px; font-weight:bold;">💡</span><div>${formattedHint}</div></div>`;
-                    }
+                        
+                        const isTicket = hintText.includes('감정권');
+                        if (isTicket) {
+                            const isUsed = usedTickets[c.card_id];
+                            const styleStr = isUsed ? "text-decoration:line-through; opacity:0.5;" : "text-decoration:none; opacity:1;";
+                            hintsHtml += `<div class="hint-text" style="cursor:pointer; border: 1px solid var(--primary-color); background:rgba(139, 69, 19, 0.1); padding:8px; border-radius:4px; margin-top:5px; transition:all 0.3s ease; ${styleStr}" onclick="toggleTicket(this, '${c.card_id}')" title="Click to toggle used status">
+                                <span style="color:var(--primary-color); margin-right:8px; font-weight:bold; flex-shrink:0; align-self:center;">[TICKET]</span>
+                                <div>${formattedHint}</div>
+                            </div>`;
+                        } else {
+                            hintsHtml += `<div class="hint-text">
+                                <span style="color:var(--primary-color); margin-right:8px; font-weight:bold; flex-shrink:0;">[HINT]</span>
+                                <div>${formattedHint}</div>
+                            </div>`;
+                        }
+                    });
                 });
 
                 Object.keys(classGroups).sort((a,b) => parseInt(a) - parseInt(b)).forEach(clsId => {
                     const cards = classGroups[clsId];
                     if (cards.length === 0) {
-                        html += `<tr class="class-divider"><td style="vertical-align:middle; font-weight:bold;">Class ${clsId}</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td><td style="color:var(--text-muted);">-</td></tr>`;
+                        html += `<tr><td style="vertical-align:middle; font-weight:bold; border-bottom: 2px solid var(--primary-color);">Class ${clsId}</td><td style="color:var(--text-muted); border-bottom: 2px solid var(--primary-color);">-</td><td style="color:var(--text-muted); border-bottom: 2px solid var(--primary-color);">-</td><td style="color:var(--text-muted); border-bottom: 2px solid var(--primary-color);">-</td><td style="color:var(--text-muted); border-bottom: 2px solid var(--primary-color);">-</td></tr>`;
                     } else {
                         cards.forEach((card, idx) => {
-                            const trClass = (idx === cards.length - 1) ? ' class="class-divider"' : '';
-                            html += `<tr${trClass}>
+                            let contents = '-';
+                            if (card.type === 'BONE' && window.boneMap && window.boneMap[card.card_id]) {
+                                const bones = window.boneMap[card.card_id];
+                                contents = `<img src="resources/skull.png" style="height:1.2em; vertical-align:middle;" title="Skull"> ${bones.skull} &nbsp; ` +
+                                    `<img src="resources/torso.png" style="height:1.2em; vertical-align:middle;" title="Torso"> ${bones.torso} &nbsp; ` +
+                                    `<img src="resources/leg.png" style="height:1.2em; vertical-align:middle;" title="Leg"> ${bones.leg} &nbsp; ` +
+                                    `<img src="resources/tail.png" style="height:1.2em; vertical-align:middle;" title="Tail"> ${bones.tail}`;
+                            }
+
+                            const isLast = (idx === cards.length - 1);
+                            const btmBorder = isLast ? ' border-bottom: 2px solid var(--primary-color);' : '';
+                            html += `<tr>
                                 ${idx === 0 ? `<td rowspan="${cards.length}" style="vertical-align:middle; font-weight:bold; border-bottom: 2px solid var(--primary-color);">Class ${clsId}</td>` : ''}
-                                <td style="font-weight:bold;">${card.card_id}</td>
-                                <td>${card.type}</td>
-                                <td>${(card.status === 'PENDING' && card.is_locked === 1) ? 'LOCKED' : card.status}</td>
+                                <td style="font-weight:bold;${btmBorder}">${card.card_id}</td>
+                                <td style="${btmBorder}">${card.type}</td>
+                                <td style="${btmBorder}">${(card.status === 'PENDING' && card.is_locked === 1) ? 'LOCKED' : card.status}</td>
+                                <td style="${btmBorder}">${contents}</td>
                             </tr>`;
                         });
                     }
@@ -248,17 +324,23 @@
 
             if (state.restorations) {
                 let restHtml = `<tr>
-                                <th style="width:20%;">Round</th>
-                                <th style="width:15%;"><img src="resources/skull.png" style="height:1.2em; vertical-align:middle;" title="Skull"></th>
-                                <th style="width:15%;"><img src="resources/torso.png" style="height:1.2em; vertical-align:middle;" title="Torso"></th>
-                                <th style="width:15%;"><img src="resources/leg.png" style="height:1.2em; vertical-align:middle;" title="Leg"></th>
-                                <th style="width:15%;"><img src="resources/tail.png" style="height:1.2em; vertical-align:middle;" title="Tail"></th>
-                                <th style="width:20%;">Error Rate</th>
+                                <th style="width:15%;">Round</th>
+                                <th style="width:15%;">Rank</th>
+                                <th style="width:12%;"><img src="resources/skull.png" style="height:1.2em; vertical-align:middle;" title="Skull"></th>
+                                <th style="width:12%;"><img src="resources/torso.png" style="height:1.2em; vertical-align:middle;" title="Torso"></th>
+                                <th style="width:12%;"><img src="resources/leg.png" style="height:1.2em; vertical-align:middle;" title="Leg"></th>
+                                <th style="width:12%;"><img src="resources/tail.png" style="height:1.2em; vertical-align:middle;" title="Tail"></th>
+                                <th style="width:22%;">Error Rate</th>
                             </tr>`;
                 const myRestorations = (state.past_restorations || []).filter(r => r.class_id == myClassId).sort((a,b) => a.round - b.round);
                 myRestorations.forEach(r => {
+                    const allForRound = (state.past_restorations || []).filter(x => x.round === r.round && x.error_rate !== null).sort((a,b) => (a.error_rate - b.error_rate) || (b.id - a.id));
+                    const rankIndex = allForRound.findIndex(x => x.class_id == myClassId);
+                    const rankStr = rankIndex !== -1 ? `#${rankIndex + 1}` : '-';
+
                     restHtml += `<tr>
                         <td>Round ${r.round}</td>
+                        <td style="font-weight:bold; color:var(--primary-color);">${rankStr}</td>
                         <td style="font-weight:bold; font-size:1.1em;">${r.skull_sub}</td>
                         <td style="font-weight:bold; font-size:1.1em;">${r.torso_sub}</td>
                         <td style="font-weight:bold; font-size:1.1em;">${r.leg_sub}</td>
@@ -272,11 +354,14 @@
             }
 
             if(state.excavatorDistribution && Object.keys(state.excavatorDistribution).length > 0) {
-                let sackHtml = [];
-                for(const [classId, sackName] of Object.entries(state.excavatorDistribution)) {
-                    sackHtml.push(`Class ${classId}: <span style="color:var(--primary-color)">${sackName}</span>`);
+                let tableHtml = `<table style="width:100%; text-align:left; font-size:1em;"><tr><th>Class</th><th>Assigned Sack</th></tr>`;
+                const sortedClasses = Object.keys(state.excavatorDistribution).sort((a,b) => parseInt(a) - parseInt(b));
+                for(const classId of sortedClasses) {
+                    const sackName = state.excavatorDistribution[classId];
+                    tableHtml += `<tr><td style="font-weight:bold;">Class ${classId}</td><td style="color:var(--primary-color); font-weight:bold;">${sackName}</td></tr>`;
                 }
-                document.getElementById('excavatorSacks').innerHTML = sackHtml.join(' | ');
+                tableHtml += `</table>`;
+                document.getElementById('excavatorSacks').innerHTML = tableHtml;
             } else {
                 document.getElementById('excavatorSacks').innerHTML = 'Awaiting Excavator Distribution...';
             }
@@ -352,7 +437,7 @@
                 const isWinner = rank === 1;
                 const card = document.createElement('div');
                 card.className = 'result-card' + (isWinner && data.isFinal ? ' winner' : '');
-                card.innerHTML = `<span>#${rank} Class ${r.class_id}</span><span>Error: ${formatErrorRate(r.error_rate, data.round)}</span>`;
+                card.innerHTML = `<span style="text-align:left;">#${rank} Class ${r.class_id}</span><span style="text-align:left; padding-left:20px;">Error: ${formatErrorRate(r.error_rate, data.round)}</span>`;
                 container.prepend(card);
                 
                 setTimeout(() => card.classList.add('visible'), (i + 1) * delay);
@@ -391,9 +476,6 @@
             const isReady = !(window.currentReadyStatus[myClassId] || false);
             socket.emit('client:setReady', { class_id: myClassId, isReady: isReady });
         }
-        socket.on('connect', () => {
-            socket.emit('getReadyStatus');
-        });
         socket.on('ready:update', (status) => {
             window.currentReadyStatus = status;
             updateReadyUI();
@@ -425,6 +507,31 @@
                 });
                 alert("Submitted successfully! Waiting for Admin approval.");
             }
+        }
+
+        function toggleStatusBoards() {
+            const overlay = document.getElementById('statusBoardsOverlay');
+            if (overlay.style.display === 'none' || overlay.style.display === '') {
+                overlay.style.display = 'flex';
+                setTimeout(() => { overlay.style.opacity = '1'; }, 10);
+            } else {
+                overlay.style.opacity = '0';
+                setTimeout(() => { overlay.style.display = 'none'; }, 300);
+            }
+        }
+
+        function toggleTicket(element, cardId) {
+            let used = JSON.parse(localStorage.getItem('usedTickets') || '{}');
+            if (used[cardId]) {
+                delete used[cardId];
+                element.style.textDecoration = 'none';
+                element.style.opacity = '1';
+            } else {
+                used[cardId] = true;
+                element.style.textDecoration = 'line-through';
+                element.style.opacity = '0.5';
+            }
+            localStorage.setItem('usedTickets', JSON.stringify(used));
         }
     </script>
 </body>
