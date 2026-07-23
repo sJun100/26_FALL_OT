@@ -101,11 +101,12 @@
                         <table id="tblPastRestorations" style="width:100%; text-align:center; font-size:0.9em;">
                             <tr>
                                 <th style="width:20%;">Round</th>
-                                <th style="width:15%;"><img src="resources/skull.png" style="height:1.2em; vertical-align:middle;" title="Skull"></th>
-                                <th style="width:15%;"><img src="resources/torso.png" style="height:1.2em; vertical-align:middle;" title="Torso"></th>
-                                <th style="width:15%;"><img src="resources/leg.png" style="height:1.2em; vertical-align:middle;" title="Leg"></th>
-                                <th style="width:15%;"><img src="resources/tail.png" style="height:1.2em; vertical-align:middle;" title="Tail"></th>
-                                <th style="width:20%;">Error Rate</th>
+                                <th style="width:12%;">Rank</th>
+                                <th style="width:11%;"><img src="resources/skull.png" style="height:1.2em; vertical-align:middle;" title="Skull"></th>
+                                <th style="width:11%;"><img src="resources/torso.png" style="height:1.2em; vertical-align:middle;" title="Torso"></th>
+                                <th style="width:11%;"><img src="resources/leg.png" style="height:1.2em; vertical-align:middle;" title="Leg"></th>
+                                <th style="width:11%;"><img src="resources/tail.png" style="height:1.2em; vertical-align:middle;" title="Tail"></th>
+                                <th style="width:24%;">Error Rate</th>
                             </tr>
                         </table>
                     </div>
@@ -324,13 +325,13 @@
 
             if (state.restorations) {
                 let restHtml = `<tr>
-                                <th style="width:15%;">Round</th>
-                                <th style="width:15%;">Rank</th>
-                                <th style="width:12%;"><img src="resources/skull.png" style="height:1.2em; vertical-align:middle;" title="Skull"></th>
-                                <th style="width:12%;"><img src="resources/torso.png" style="height:1.2em; vertical-align:middle;" title="Torso"></th>
-                                <th style="width:12%;"><img src="resources/leg.png" style="height:1.2em; vertical-align:middle;" title="Leg"></th>
-                                <th style="width:12%;"><img src="resources/tail.png" style="height:1.2em; vertical-align:middle;" title="Tail"></th>
-                                <th style="width:22%;">Error Rate</th>
+                                <th style="width:20%;">Round</th>
+                                <th style="width:12%;">Rank</th>
+                                <th style="width:11%;"><img src="resources/skull.png" style="height:1.2em; vertical-align:middle;" title="Skull"></th>
+                                <th style="width:11%;"><img src="resources/torso.png" style="height:1.2em; vertical-align:middle;" title="Torso"></th>
+                                <th style="width:11%;"><img src="resources/leg.png" style="height:1.2em; vertical-align:middle;" title="Leg"></th>
+                                <th style="width:11%;"><img src="resources/tail.png" style="height:1.2em; vertical-align:middle;" title="Tail"></th>
+                                <th style="width:24%;">Error Rate</th>
                             </tr>`;
                 const myRestorations = (state.past_restorations || []).filter(r => r.class_id == myClassId).sort((a,b) => a.round - b.round);
                 myRestorations.forEach(r => {
@@ -339,13 +340,13 @@
                     const rankStr = rankIndex !== -1 ? `#${rankIndex + 1}` : '-';
 
                     restHtml += `<tr>
-                        <td>Round ${r.round}</td>
+                        <td style="white-space:nowrap;">Round ${r.round}</td>
                         <td style="font-weight:bold; color:var(--primary-color);">${rankStr}</td>
                         <td style="font-weight:bold; font-size:1.1em;">${r.skull_sub}</td>
                         <td style="font-weight:bold; font-size:1.1em;">${r.torso_sub}</td>
                         <td style="font-weight:bold; font-size:1.1em;">${r.leg_sub}</td>
                         <td style="font-weight:bold; font-size:1.1em;">${r.tail_sub}</td>
-                        <td style="color:${r.error_rate !== null ? 'var(--primary-color)' : 'var(--text-muted)'}; font-weight:bold;">
+                        <td style="color:${r.error_rate !== null ? 'var(--primary-color)' : 'var(--text-muted)'}; font-weight:bold; white-space:nowrap;">
                             ${r.error_rate !== null ? formatErrorRate(r.error_rate, r.round) : 'Pending'}
                         </td>
                     </tr>`;
